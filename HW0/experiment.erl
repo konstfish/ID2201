@@ -1,5 +1,5 @@
 -module(experiment).
--export([sum/1, stnl/1]).
+-export([sum/1, stnl/1, parse_uri/1, read_file/1]).
 
 sum(L) -> 
 	case L of
@@ -19,3 +19,19 @@ stnl([C|R0]) ->
   io:format("a: ~p ~p~n", [Rest, R1]),
   {[C|Rest], R1}.
 
+parse_uri([]) ->
+  [];
+parse_uri([$?|_]) ->
+  [];
+parse_uri([$#|_]) ->
+  [];
+parse_uri([C|Tail]) ->
+  Rest = parse_uri(Tail),
+  [C|Rest].
+
+%parse_file_extension([])
+
+read_file(Path) ->
+  %file:list_dir(Path).
+  file:read_file(Path).
+  %file:read_file_info(Path).

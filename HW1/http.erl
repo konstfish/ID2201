@@ -1,5 +1,5 @@
 -module(http).
--export([parse_request/1, ok/1, get/1]).
+-export([parse_request/1, ok/1, ok/2, not_found/0, get/1]).
 
 % request parsing
 parse_request(R0) ->
@@ -49,7 +49,19 @@ message_body(R) ->
 
 % replies
 ok(Body) ->
-  "HTTP/1.1 200 OK\r\n" ++ "\r\n" ++ Body.
+  ok(Body, []).
+
+ok(Headers, Body) ->
+  response_builder("HTTP/1.1", "200", Body, Headers).
+
+not_found() ->
+  response_builder("HTTP/1.1", "404 Not Found", [], "Not Found").
+
+response_builder(Version, Status, Headers, Body) ->
+  Version ++ " " ++ Status ++ "\r\n" ++
+  "Server: rudy/0.1\r\n" ++
+  string:join(Headers, "\r\n") ++
+  "\r\n" ++ Body.
 
 get(URI) ->
   "GET " ++ URI ++ " HTTP/1.1\r\n" ++ "\r\n".
