@@ -13,14 +13,17 @@ run(N, Host, Port) ->
     N == 0 ->
       ok;
     true ->
+      Start = erlang:system_time(micro_seconds),
       request(Host, Port),
+      Finish = erlang:system_time(micro_seconds),
+      io:format("~p,~p,~p~n", [erlang:system_time(micro_seconds),N, Finish - Start]),
       run(N-1, Host, Port)
   end.
 
 request(Host, Port) ->
   Opt = [list, {active, false}, {reuseaddr, true}],
   {ok, Server} = gen_tcp:connect(Host, Port, Opt),
-  gen_tcp:send(Server, http:get("foo")),
+  gen_tcp:send(Server, http:post("foo", "bar")),
   Recv = gen_tcp:recv(Server, 0),
   case Recv of
     {ok, _} ->

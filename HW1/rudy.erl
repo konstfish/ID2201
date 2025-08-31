@@ -1,36 +1,60 @@
 -module(rudy).
--export([start/1, stop/0]).
+-export([start/1, start/2, stop/0]).
 -import(gen_tcp, []).
 -import(http, []).
 
 start(Port) ->
-  register(rudy, spawn(fun() -> init(Port) end)).
+  start(Port, 1).
+
+start(Port, Workers) ->
+  register(rudy, spawn(fun() -> init(Port, Workers) end)).
 
 stop() ->
-  exit(whereis(rudy), "time to die").
+  rudy ! kill.
 
-init(Port) ->
+init(Port, Workers) ->
   Opt = [list, {active, false}, {reuseaddr, true}],
   % open socket, options get us the request as a string (list)
   case gen_tcp:listen(Port, Opt) of
     {ok, Listen} ->
-      handler(Listen), % on socket open, pass to handler
-      gen_tcp:close(Listen), % close listening socket
-      ok;
+      Handlers = create_handlers(Listen, Workers), % on socket open, pass to handler(s)
+      receive
+        kill ->
+          close_handlers(Handlers),
+          gen_tcp:close(Listen), % close listening socket
+          ok
+      end;
     {error, Error} ->
       io:format("rudy: error: ~w~n", [Error]),
       error
   end.
 
+close_handlers([]) ->
+  ok;
+close_handlers([Handler|Handlers]) ->
+  io:format("Sending kill to Handler ~p~n", [ Handler ]),
+  Handler ! kill,
+  close_handlers(Handlers).
+
+create_handlers(_, 0) ->
+  [];
+create_handlers(Listen, N) ->
+  io:format("rudy: info: creating handler ~w~n", [N]),
+  PID = spawn(fun() -> handler(Listen) end),
+  [PID | create_handlers(Listen, N-1)].
+
 handler(Listen) ->
   case gen_tcp:accept(Listen) of
     {ok, Client} ->
-      request(Client); % accept request, pass to request handler
+      request(Client), % accept request, pass to request handler(s)
+      handler(Listen);
+    {error, closed} ->
+      io:format("rudy: warn: handler closed"),
+      warn;
     {error, Error} ->
       io:format("rudy: error: ~w~n", [Error]),
       error
-  end,
-  handler(Listen).
+  end.
 
 request(Client) ->
   % connection established, read input & return as string,
@@ -57,23 +81,24 @@ parse_uri([C|Tail]) ->
   Rest = parse_uri(Tail),
   [C|Rest].
 
+% gets the extension from a filename
+ext(File) ->
+  lists:last(string:split(File, ".", all)).
+
 % directory listing incl. hyperlinks
-build_directory_index(BasePath, []) ->
+build_directory_index(_, []) ->
   [];
 build_directory_index(BasePath, [File|DirContents]) ->
   io:format("~p ~p~n", [File, DirContents]),
   "<a href=\""++ BasePath ++ "/" ++ File ++ "\">"++ File ++"</a></br>" ++ build_directory_index(BasePath, DirContents).
 
 reply({{get, URI, _}, _, _}) ->
-  io:format("rudy: info: serving ~p~n", [URI]),
+  io:format("rudy: info: ~p serving ~p~n", [self(), URI]),
   
   % cleanup URI
   URIClean = "." ++ parse_uri(URI),
 
   % TODO: proper error handling & headers returned
-  % write func to check content type
-  % write server error 500 return
-  % make this entire thing multithreaded w/ a thread pool to handle files
   % make this killable using kill
   % measure baseline func for report
   % write report
@@ -88,23 +113,33 @@ reply({{get, URI, _}, _, _}) ->
               % http:ok(string:join(DirContents, " "));
               http:ok(build_directory_index(URIClean, DirContents));
             _ ->
-              http:not_found()
+              http:internal_error("Unable to retrieve directory contents")
           end;
         {file_info, Size, regular, _, _, _, _, _, _, _, _, _, _, _} ->
           case file:read_file(URIClean) of
             {ok, Contents} ->
-              http:ok(Contents);
+              MIME = http:mime(ext(URIClean)),
+
+              GzContents = zlib:gzip(Contents),
+              GzSize = byte_size(GzContents),
+
+              Headers = [
+                        http:construct_header("Content-Type", MIME),
+                        http:construct_header("Content-Length", integer_to_list(GzSize)),
+                        http:construct_header("Content-Encoding", "gzip")
+                        ],
+              
+              http:ok(GzContents, Headers);
             {error, Error} ->
-              http:not_found()
+              http:internal_error(Error)
           end;
         _ ->
-          http:not_found()
+          http:internal_error("Issue parsing file")
       end
-  end.
-  
-% baseline reply implementation
-%reply({{get, URI, _}, _, _}) ->
-%  io:format("rudy: info: serving ~p~n", [URI]),
-%  timer:sleep(40),
-%  http:ok("out" ++ URI).
+  end;
+% baseline echoserver implementation
+reply({{post, URI, _}, _, Body}) ->
+  io:format("rudy: info: ~p serving echo ~p~n", [self(), URI]),
+  timer:sleep(40),
+  http:ok(URI ++ "\r\n" ++ Body).
 

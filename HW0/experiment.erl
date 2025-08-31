@@ -1,5 +1,8 @@
 -module(experiment).
--export([sum/1, stnl/1, parse_uri/1, read_file/1]).
+-export([ext/1, sum/1, stnl/1, parse_uri/1, read_file/1]).
+
+ext(File) ->
+  lists:last(string:split(File, ".", all)).
 
 sum(L) -> 
 	case L of
