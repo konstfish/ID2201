@@ -89,50 +89,66 @@ ext(File) ->
 build_directory_index(_, []) ->
   [];
 build_directory_index(BasePath, [File|DirContents]) ->
-  io:format("~p ~p~n", [File, DirContents]),
-  "<a href=\""++ BasePath ++ "/" ++ File ++ "\">"++ File ++"</a></br>" ++ build_directory_index(BasePath, DirContents).
+  % io:format("~p ~p~n", [File, DirContents]),
+  Seperator = case lists:suffix("/", BasePath) of
+    true -> "";
+    false -> "/"
+  end,
+  "<a href=\""++ string:prefix(BasePath, ".") ++ Seperator ++ File ++ "\">"++ File ++"</a></br>" ++ build_directory_index(BasePath, DirContents).
 
-reply({{get, URI, _}, _, _}) ->
+reply_fs_directory(URIClean) ->
+  case file:list_dir(URIClean) of
+    {ok, DirContents} ->
+      % http:ok(string:join(DirContents, " "));
+      http:ok(build_directory_index(URIClean, DirContents));
+    _ ->
+      http:internal_error("Unable to retrieve directory contents")
+  end.
+
+reply_fs_file(URIClean, Size, Gzip) ->
+  case file:read_file(URIClean) of
+      {ok, Contents} ->
+        MIME = http:mime(ext(URIClean)),
+
+        BaseHeaders = [http:construct_header("Content-Type", MIME)],
+
+        case Gzip of
+          true ->
+            GzContents = zlib:gzip(Contents),
+            GzSize = byte_size(GzContents),
+
+            ResponseHeaders = BaseHeaders ++ [
+                      http:construct_header("Content-Length", integer_to_list(GzSize)),
+                      http:construct_header("Content-Encoding", "gzip")
+                    ],
+            
+            http:ok(GzContents, ResponseHeaders);
+
+          false ->
+            ResponseHeaders = BaseHeaders ++ [http:construct_header("Content-Length", integer_to_list(Size))],
+            http:ok(Contents, ResponseHeaders)
+          end;
+
+      {error, Error} ->
+      http:internal_error(Error)
+  end.
+
+reply({{get, URI, _}, Headers, _}) ->
   io:format("rudy: info: ~p serving ~p~n", [self(), URI]),
   
   % cleanup URI
   URIClean = "." ++ parse_uri(URI),
 
-  % TODO: proper error handling & headers returned
-  % make this killable using kill
-  % measure baseline func for report
-  % write report
   case file:read_file_info(URIClean) of
     {error,enoent} ->
       http:not_found();
     {ok, FileInfo} ->
       case FileInfo of
         {file_info, _, directory, _, _, _, _, _, _, _, _, _, _, _} ->
-          case file:list_dir(URIClean) of
-            {ok, DirContents} ->
-              % http:ok(string:join(DirContents, " "));
-              http:ok(build_directory_index(URIClean, DirContents));
-            _ ->
-              http:internal_error("Unable to retrieve directory contents")
-          end;
+          reply_fs_directory(URIClean);
         {file_info, Size, regular, _, _, _, _, _, _, _, _, _, _, _} ->
-          case file:read_file(URIClean) of
-            {ok, Contents} ->
-              MIME = http:mime(ext(URIClean)),
-
-              GzContents = zlib:gzip(Contents),
-              GzSize = byte_size(GzContents),
-
-              Headers = [
-                        http:construct_header("Content-Type", MIME),
-                        http:construct_header("Content-Length", integer_to_list(GzSize)),
-                        http:construct_header("Content-Encoding", "gzip")
-                        ],
-              
-              http:ok(GzContents, Headers);
-            {error, Error} ->
-              http:internal_error(Error)
-          end;
+          Gzip = http:header_accept_encoding(Headers),
+          reply_fs_file(URIClean, Size, Gzip);
         _ ->
           http:internal_error("Issue parsing file")
       end

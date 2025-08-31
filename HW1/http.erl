@@ -1,5 +1,5 @@
 -module(http).
--export([parse_request/1, ok/1, ok/2, not_found/0, internal_error/1, get/1, post/2, construct_header/2, mime/1]).
+-export([parse_request/1, ok/1, ok/2, not_found/0, internal_error/1, get/1, post/2, construct_header/2, mime/1, header_accept_encoding/1]).
 
 % request parsing
 parse_request(R0) ->
@@ -48,6 +48,14 @@ header([13,10|R0]) ->
 header([C|R0]) ->
   {Rest, R1} = header(R0),
   {[C|Rest], R1}. 
+
+% checks if gzip encoding is accepted
+%header_accept_encoding([]) ->
+%  false;
+header_accept_encoding(Headers) ->
+  lists:any(fun(Header) -> 
+      string:find(Header, "Accept-Encoding: gzip") =/= nomatch 
+  end, Headers).
 
 %% body parsing
 message_body(R) ->
