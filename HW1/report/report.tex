@@ -1,5 +1,6 @@
 \documentclass[a4paper, 11pt]{article}
 \usepackage[utf8]{inputenc} % Change according your file encoding
+\usepackage{float}
 \usepackage{graphicx}
 \usepackage{url}
 
@@ -14,108 +15,70 @@
 
 \section{Introduction}
 
-\textit{Summary of the work you've done, what are the topics we cover
-  in this seminar, etc. Remember that you should deliver this report
-  at the start of the seminar.}
-
-What is the main topic related to distributed systems covered in this seminar?
-Why is it important?
+As part of this report a HTTP/1.1 server partially implementing the RFC 2616\footnote{\url{https://www.ietf.org/rfc/rfc2616.txt}} specification was created in the Erlang programming language.
+The server is capable of correctly parsing and responding to HTTP requests, handling multiple clients concurrently, and acting as a file server with functional encoding. xxx todo how related to dist system, why important
 
 \section{Main problems and solutions}
 
-\textit{Summarize your problems, proposed solutions, etc. You do not
-  need to copy\&paste your code. Only if needed, you may write down
-  small code snipeds to show how you have solved a specific
-  problem/question.}
+\subsection{Scope}
 
-Did you find any specific problem with the development of your
-solution?  How did you solve it?
+As the HTTP/1.1 specification is quite broad building up scope creep beyond the goals of the original assignment was a concern. Work was limited to objectives specifically mentioned in the assignment description.
+At time of submission the server currently supports the following features:
+\begin{itemize}
+\item Listening on a specified port and delegating requests to one or many handler processes
+\item Parsing HTTP $GET$ and $POST$ requests (URI, request headers, and body)
+\item Responding with one of three HTTP status codes: $200$ OK, $404$ Not Found, or $500$ Internal Server Error
+\item Serving static files from the working directory and its subdirectories with a limited number of supported media types
+\item Support for the Accept-Enconding request header, specifically gzip
+\end{itemize}
 
-If you want to give a code example you can do it uing the verbatim environment.
-\begin{verbatim}
-this(X) ->
-    Y = is(X),
-    a(test(Y)).
-\end{verbatim}
-
+\subsection{Erlang}
+todo
 \section{Evaluation}
 
-\textit{If needed, you may provide figures or tables with main results
-  evaluating your proposals. For each seminar, we will provide you
-  with some guidance on which kind of evaluation you should do.}
+Testing the baseline implementation of \textit{Rudy}, including the artificial 40ms delay, with the given benchmark program measures 100 requests in 4.916 seconds, or $\approx$20 requests per second.
+Since the benchmark runs sequentially, the regular parsing overhead can be calculated as 9,16 ms meaning the artificial delay is over four times the length of a regular request.
 
+Additionally, while the artificial delay isn't noticeable with a single instance of the benchmark running, starting a second run from another machine doubles the request time while the benchmarks overlap as can be seen in Figure \ref{fig:results1}.
 
-And Figures \ref{fig:results1} and \ref{fig:results2 } shows how to
-add a figure with some results. These figures have been created with
-gnuplot. There are tons of different kinds of plots that can be
-generated with gnuplot. Make sure to check out
-\url{http://gnuplot.info/demo/} and look at them so you can see what
-can you do with this program.
-
-
-\begin{figure}
+\begin{figure}[H]
   \begin{center}
     \includegraphics{graphs/requests-single-process/requests.pdf}
-    \caption{Some random results sdfds}
+    \caption{Single Process Handler}
     \label{fig:results1}
   \end{center}
 \end{figure}
 
-To obtain these figures you have to:
+This outcome is expected, as a single handler process will always be blocked while already responding to a request during which all new requests are waiting to be picked up.
+To solve this and increase throughput, Erlangs support for having multiple processes listen to the same socket was utilized.
+Figure \ref{fig:results2} shows the same two sequential benchmarks running against an instance of \textit{Rudy} with two handler processes running, resulting in no spike in response delay.
+
+\begin{figure}[H]
+  \begin{center}
+    \includegraphics{graphs/requests-multi-process/requests.pdf}
+    \caption{Multi-Process Handler}
+    \label{fig:results2}
+  \end{center}
+\end{figure}
+
+\subsection{File Server Functionality}
+The implementation of \textit{Rudy} supports serving gzip compressed files including a limited selection of MIME types. xxx
+\begin{figure}[H]
+  \begin{center}
+    \includegraphics[height=200px]{graphs/browser/pdf-gzip.png}
+    \caption{\textit{Rudy} serving a gzipped PDF file to a browser}
+    \label{fig:browser1}
+  \end{center}
+\end{figure}
+
 \begin{enumerate}
-
-\item Create the data file from the experiments (look at file
-  experiment.dat)
-
-\item Create a gnuplot file to create a figure in eps format (look at
-  files results1.plot and results2.plot). These files may be very
-  complex. But for the results we want to show, these examples are
-  enough. To create the eps figures, execute in terminal:
-
-\begin{verbatim}
-$> gnuplot results1.plot 
-\end{verbatim}
-
-\item As pdflatex does not recognize eps files, you must convert them
-  to pdf files. This is done by (it will generate a file
-  results1.pdf):
-
-\begin{verbatim}
-$> epstopdf results1.eps
-\end{verbatim}
-
-\item That's it! Just include the figure as shown in this template and
-  compile the latex as explained in the document ``Introduction to
-  \LaTeXe''.
-
+\item one
+\item two
 \end{enumerate}
-
-
-If you want, you can also create a table of results as Table
-\ref{tab:results}. If you look at the template code, you will see how
-to do a table in \LaTeX.
-
-\begin{table}[h]
-\centering
-\begin{tabular}{lcc}
-First column & Second column & Third column\\\hline
-Case 1 & 1.1 & 1.2\\\hline
-Case 2 & 2.1 & 2.2\\\hline
-Case 3 & 3.1 & 3.2\\\hline
-\end{tabular}
-\caption{Some random results in a table}
-\label{tab:results}
-\end{table}
 
 \section{Conclusions}
 
-\textit{Change the layout of this template as you want. It's only for
-  your guidance but if you feel that you need a different structure,
-  feel free to change it. The report should not be too long ($\approx$
-  2-3 pages).}
-
-What have you learnt from the problem presented?
-Was it useful?
+xxx What have you learnt from the problem presented? Was it useful?
 
 
 \end{document}
