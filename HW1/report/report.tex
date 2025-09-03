@@ -3,6 +3,11 @@
 \usepackage{float}
 \usepackage{graphicx}
 \usepackage{url}
+\usepackage{enumitem}
+\usepackage{subcaption}
+
+\setlist[itemize]{itemsep=0.5pt, parsep=0.5pt, topsep=0pt, partopsep=0pt}
+\setlist[enumerate]{itemsep=0.5pt, parsep=0.5pt, topsep=0pt, partopsep=0pt}
 
 %opening
 \title{HW1 Report, Rudy: A Small Web Server}
@@ -14,55 +19,58 @@
 \maketitle
 
 \section{Introduction}
+The Hypertext Transfer Protocol is one of the cornerstones of the modern Internet, serving as a primary communication protocol that enables distributed systems to function on the World Wide Web.
 
 As part of this report a HTTP/1.1 server partially implementing the RFC 2616\footnote{\url{https://www.ietf.org/rfc/rfc2616.txt}} specification was created in the Erlang programming language.
-The server is capable of correctly parsing and responding to HTTP requests, handling multiple clients concurrently, and acting as a file server with functional encoding. xxx todo how related to dist system, why important
-
+The server is capable of correctly parsing and responding to HTTP requests, handling multiple clients concurrently, and acting as a file server with functional encoding.
 \section{Main problems and solutions}
-
-\subsection{Scope}
-
-As the HTTP/1.1 specification is quite broad building up scope creep beyond the goals of the original assignment was a concern. Work was limited to objectives specifically mentioned in the assignment description.
-At time of submission the server currently supports the following features:
+As the HTTP/1.1 specification is quite broad building up scope creep beyond the goals of the original assignment was a concern. Work was limited to objectives mentioned or implied in the assignment description.
+At time of submission the server supports the following feature set:
 \begin{itemize}
-\item Listening on a specified port and delegating requests to one or many handler processes
-\item Parsing HTTP $GET$ and $POST$ requests (URI, request headers, and body)
+\item Listening on a specified port and delegating requests to one or many handler processes 
+\item Parsing HTTP requests (URI, request headers, and body)
 \item Responding with one of three HTTP status codes: $200$ OK, $404$ Not Found, or $500$ Internal Server Error
-\item Serving static files from the working directory and its subdirectories with a limited number of supported media types
-\item Support for the Accept-Enconding request header, specifically gzip
+\item On $POST$, acting like an echo server
+\item On $GET$, serving static files from the working directory and its subdirectories with a limited number of supported media types
+\item Dynamically responding with interactive directory trees
+\item Respecting the Accept-Encoding request header, specifically gzip
 \end{itemize}
 
-\subsection{Erlang}
-todo
 \section{Evaluation}
 
-Testing the baseline implementation of \textit{Rudy}, including the artificial 40ms delay, with the given benchmark program measures 100 requests in 4.916 seconds, or $\approx$20 requests per second.
-Since the benchmark runs sequentially, the regular parsing overhead can be calculated as 9,16 ms meaning the artificial delay is over four times the length of a regular request.
+\subsection{Throughput}
 
-Additionally, while the artificial delay isn't noticeable with a single instance of the benchmark running, starting a second run from another machine doubles the request time while the benchmarks overlap as can be seen in Figure \ref{fig:results1}.
+Testing the baseline implementation of \textit{Rudy}, including the artificial 40ms delay, with the given benchmark program measures 100 requests in 4.916 seconds, or $\approx$20 requests per second.
+Since the benchmark runs sequentially, the request parsing overhead and response delay can be calculated as 9,16ms meaning the artificial delay is over four times the length of what a regular request would be.
+
+Additionally, while the artificial delay isn't noticeable with a single instance of the benchmark running, starting a second run from another machine doubles the request time during the overlap as can be seen in Figure \ref{fig:results1}.
 
 \begin{figure}[H]
   \begin{center}
-    \includegraphics{graphs/requests-single-process/requests.pdf}
-    \caption{Single Process Handler}
-    \label{fig:results1}
+    \begin{subfigure}[b]{0.494\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{graphs/requests-single-process/requests.pdf}
+      \caption{Single Process Handler}
+      \label{fig:results1}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.494\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{graphs/requests-multi-process/requests.pdf}
+      \caption{Multi-Process Handler}
+      \label{fig:results2}
+    \end{subfigure}
   \end{center}
+  \caption{Comparison of Single and Multi-Process Handlers}
+  \label{fig:comparison}
 \end{figure}
 
-This outcome is expected, as a single handler process will always be blocked while already responding to a request during which all new requests are waiting to be picked up.
-To solve this and increase throughput, Erlangs support for having multiple processes listen to the same socket was utilized.
+This outcome is expected, as a single handler process will always be blocked while already responding to a request, during which all new requests are waiting to be picked up.
+To solve this and increase throughput, Erlang's support for having multiple processes listen to the same socket was utilized.
 Figure \ref{fig:results2} shows the same two sequential benchmarks running against an instance of \textit{Rudy} with two handler processes running, resulting in no spike in response delay.
 
-\begin{figure}[H]
-  \begin{center}
-    \includegraphics{graphs/requests-multi-process/requests.pdf}
-    \caption{Multi-Process Handler}
-    \label{fig:results2}
-  \end{center}
-\end{figure}
-
-\subsection{File Server Functionality}
-The implementation of \textit{Rudy} supports serving gzip compressed files including a limited selection of MIME types. xxx
+\subsection{Delivering Files}
+The implementation of \textit{Rudy} supports serving files from a limited selection of MIME types with proper response headers as shown in Figure \ref{fig:browser1}. Additionally, most modern browsers will ask for compressed content to be returned, which was implemented by parsing the request headers and using the zlib module\footnote{\url{https://www.erlang.org/doc/apps/erts/zlib.html}} to respond with gzip files. 
 \begin{figure}[H]
   \begin{center}
     \includegraphics[height=200px]{graphs/browser/pdf-gzip.png}
@@ -71,14 +79,10 @@ The implementation of \textit{Rudy} supports serving gzip compressed files inclu
   \end{center}
 \end{figure}
 
-\begin{enumerate}
-\item one
-\item two
-\end{enumerate}
-
 \section{Conclusions}
 
-xxx What have you learnt from the problem presented? Was it useful?
-
+This assignment provided a helpful review on the underlying processes that enable querying web resources.
+Additionally, it served as an excellent introduction to functional programming, coming from an imperative background, the initial learning curve was definitely reduced by starting out with Erlang's TCP/IP socket API.
+Implementing concurrent request handling was pivotal in understanding the language's process-oriented approach.
 
 \end{document}

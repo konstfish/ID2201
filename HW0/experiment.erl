@@ -36,5 +36,5 @@ parse_uri([C|Tail]) ->
 
 read_file(Path) ->
   %file:list_dir(Path).
-  file:read_file(Path).
-  %file:read_file_info(Path).
+  %file:read_file(Path).
+  file:read_file_info(Path).
