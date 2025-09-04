@@ -1,5 +1,5 @@
 -module(http).
--export([parse_request/1, ok/1, ok/2, not_found/0, internal_error/1, get/1, post/2, construct_header/2, mime/1, header_accept_encoding/1]).
+-export([parse_request/1, ok/1, ok/2, not_found/0, internal_error/1, get/1, post/2, construct_header/2, parse_uri/1, ext/1, mime/1, header_accept_encoding/1]).
 
 % request parsing
 parse_request(R0) ->
@@ -61,11 +61,26 @@ header_accept_encoding(Headers) ->
 message_body(R) ->
   {R, []}.
 
-% helpers
+%% helpers
 construct_header(Name, Value) ->
   Name ++ ": " ++ Value.
 
-%% mime types
+% very simple uri cleanup to cut out url params and hash
+parse_uri([]) ->
+  [];
+parse_uri([$?|_]) ->
+  [];
+parse_uri([$#|_]) ->
+  [];
+parse_uri([C|Tail]) ->
+  Rest = parse_uri(Tail),
+  [C|Rest].
+
+% gets the extension from a filename
+ext(File) ->
+  lists:last(string:split(File, ".", all)).
+
+% get mime types from file extension
 mime("json") ->
   "application/json";
 mime("mp4") ->
@@ -79,7 +94,7 @@ mime("pdf") ->
 mime(_) ->
   "text/plain".
 
-% replies
+%% replies
 ok(Body) ->
   ok(Body, []).
 

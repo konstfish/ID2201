@@ -3,6 +3,7 @@
 -import(gen_tcp, []).
 -import(http, []).
 
+%% exports
 start(Port) ->
   start(Port, 1).
 
@@ -12,15 +13,16 @@ start(Port, Workers) ->
 stop() ->
   rudy ! kill.
 
+%% rudy main socket api implementation
 init(Port, Workers) ->
   Opt = [list, {active, false}, {reuseaddr, true}],
   % open socket, options get us the request as a string (list)
   case gen_tcp:listen(Port, Opt) of
     {ok, Listen} ->
-      Handlers = create_handlers(Listen, Workers), % on socket open, pass to handler(s)
+      create_handlers(Listen, Workers), % on socket open, pass to handler(s)
       receive
         kill ->
-          close_handlers(Handlers),
+          % close_handlers(Handlers), % note this doesn't work yet
           gen_tcp:close(Listen), % close listening socket
           ok
       end;
@@ -29,12 +31,14 @@ init(Port, Workers) ->
       error
   end.
 
-close_handlers([]) ->
-  ok;
-close_handlers([Handler|Handlers]) ->
-  io:format("Sending kill to Handler ~p~n", [ Handler ]),
-  Handler ! kill,
-  close_handlers(Handlers).
+% temporary close handlers helper, 
+% unimplemented due to not wanting to swap to {active, true}
+%close_handlers([]) ->
+%  ok;
+%close_handlers([Handler|Handlers]) ->
+%  io:format("Sending kill to Handler ~p~n", [ Handler ]),
+%  Handler ! kill,
+%  close_handlers(Handlers).
 
 create_handlers(_, 0) ->
   [];
@@ -49,7 +53,7 @@ handler(Listen) ->
       request(Client), % accept request, pass to request handler(s)
       handler(Listen);
     {error, closed} ->
-      io:format("rudy: warn: handler closed"),
+      io:format("rudy: warn: handler closed~n"),
       warn;
     {error, Error} ->
       io:format("rudy: error: ~w~n", [Error]),
@@ -70,21 +74,7 @@ request(Client) ->
   end,
   gen_tcp:close(Client). % close connection
 
-% very simple uri cleanup to cut out url params and hash
-parse_uri([]) ->
-  [];
-parse_uri([$?|_]) ->
-  [];
-parse_uri([$#|_]) ->
-  [];
-parse_uri([C|Tail]) ->
-  Rest = parse_uri(Tail),
-  [C|Rest].
-
-% gets the extension from a filename
-ext(File) ->
-  lists:last(string:split(File, ".", all)).
-
+%% fileserver functionality
 % directory listing incl. hyperlinks
 build_directory_index(_, []) ->
   [];
@@ -108,7 +98,7 @@ reply_fs_directory(URIClean) ->
 reply_fs_file(URIClean, Size, Gzip) ->
   case file:read_file(URIClean) of
       {ok, Contents} ->
-        MIME = http:mime(ext(URIClean)),
+        MIME = http:mime(http:ext(URIClean)),
 
         BaseHeaders = [http:construct_header("Content-Type", MIME)],
 
@@ -133,11 +123,13 @@ reply_fs_file(URIClean, Size, Gzip) ->
       http:internal_error(Error)
   end.
 
+%% content reply
+% GET, fileserver
 reply({{get, URI, _}, Headers, _}) ->
   io:format("rudy: info: ~p serving ~p~n", [self(), URI]),
   
   % cleanup URI
-  URIClean = "." ++ parse_uri(URI),
+  URIClean = "." ++ http:parse_uri(URI),
 
   case file:read_file_info(URIClean) of
     {error,enoent} ->
@@ -153,7 +145,7 @@ reply({{get, URI, _}, Headers, _}) ->
           http:internal_error("Issue parsing file")
       end
   end;
-% baseline echoserver implementation
+% POST, baseline echoserver implementation
 reply({{post, URI, _}, _, Body}) ->
   io:format("rudy: info: ~p serving echo ~p~n", [self(), URI]),
   timer:sleep(40),
