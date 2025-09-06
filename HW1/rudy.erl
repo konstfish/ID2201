@@ -136,7 +136,7 @@ reply({{get, URI, _}, Headers, _}) ->
       http:not_found();
     {ok, FileInfo} ->
       case FileInfo of
-        {file_info, _, directory, _, _, _, _, _, _, _, _, _, _, _} ->
+        {file_info, _, directory, _,  _, _, _, _, _, _, _, _, _, _} ->
           reply_fs_directory(URIClean);
         {file_info, Size, regular, _, _, _, _, _, _, _, _, _, _, _} ->
           Gzip = http:header_accept_encoding(Headers),

@@ -1,3 +1,5 @@
+4/4 Points lego
+
 Develop a web server and access it using a regular web browser.
 
 In this assignment, you will build a small web server described in the following specification. It sounds more complicated than it is. Before the reporting session, you should have started with Erlang and completed a small web server. You have to do some performance measurements and write a report describing your experiments and findings.
