@@ -11,37 +11,94 @@ https://www.erlang.org/doc/apps/stdlib/sets.html#filter/2
 
 ## Test Commands
 
+### Routy
+`erl -name austria@10.93.21.241 -setcookie routy -connect_all false`
+`erl -name sweden@10.93.21.241 -setcookie routy -connect_all false`
+
+```erlang
+routy:start(vienna, vienna).
+routy:start(salzburg, salzburg).
+routy:start(eisenstadt, eisenstadt).
+routy:start(innsbruck, innsbruck).
+routy:start(wrneustadt, wrneustadt).
+
+% r2 ! {addupdate, stockholm, {r1, 'sweden@10.93.21.241'}}.
+
+% salzburg <-> vienna
+vienna ! {addupdate, salzburg, salzburg}.
+salzburg ! {addupdate, vienna, vienna}.
+
+% vienna <-> eisenstadt
+vienna ! {addupdate, eisenstadt, eisenstadt}.
+eisenstadt ! {addupdate, vienna, vienna}.
+
+% vienna -> wiener neustadt
+vienna ! {addupdate, wrneustadt, wrneustadt}.
+
+% eisenstadt <-> wiener neustadt
+eisenstadt ! {addupdate, wrneustadt, wrneustadt}.
+wrneustadt ! {addupdate, eisenstadt, eisenstadt}.
+
+% salzburg -> innsbruck
+salzburg ! {addupdate, innsbruck, innsbruck}.
+
+%% updates
+vienna ! broadcast.
+salzburg ! broadcast.
+eisenstadt ! broadcast.
+innsbruck ! broadcast.
+wrneustadt ! broadcast.
+
+vienna ! update.
+salzburg ! update.
+eisenstadt ! update.
+innsbruck ! update.
+wrneustadt ! update.
+
+salzburg ! debug.
+
+salzburg ! {send, eisenstadt, "Hello"}.
+
+% (austria@10.93.21.241)73> wrneustadt ! {send, innsbruck, "Hello"}.
+%wrneustadt: routing message ("Hello")
+%{send,innsbruck,"Hello"}
+%eisenstadt: routing message ("Hello")
+%vienna: routing message ("Hello")
+%salzburg: routing message ("Hello")
+%innsbruck: received message "Hello"
+```
+
 ### Router
 ```erlang
 %% test commands
 
-I0 = router:new().
+I0 = intf:new().
 
 P1 = spawn(fun() -> receive Msg -> io:format("P1: ~p~n", [Msg]) end end).
 P2 = spawn(fun() -> receive Msg -> io:format("P2: ~p~n", [Msg]) end end).
 R1 = make_ref().
 R2 = make_ref().
 
-I1 = router:add(london, R1, P1, I0).
-I2 = router:add(paris, R2, P2, I1).
+I1 = intf:add(london, R1, P1, I0).
+I2 = intf:add(paris, R2, P2, I1).
 
-router:lookup(london, I2).
-router:lookup(paris, I2).
-router:lookup(madrid, I2).
+intf:lookup(london, I2).
+intf:lookup(paris, I2).
+intf:lookup(madrid, I2).
 
-router:ref(london, I2).
-router:ref(paris, I2).
+intf:ref(london, I2).
+intf:ref(paris, I2).
 
-router:name(R1, I2).
-router:name(R2, I2).
+intf:name(R1, I2).
+intf:name(R2, I2).
 
-router:list(I2).
+intf:list(I2).
 
-router:broadcast(hello_world, I2).
+intf:broadcast(hello_world, I2).
 
-I3 = router:remove(london, I2).
-router:list(I3).
-router:lookup(london, I3).
+I3 = intf:remove(london, I2).
+intf:list(I3).
+intf:lookup(london, I3).
 ```
 
 ### History
