@@ -1,12 +1,17 @@
-% Very simple template for lab reports. Most common packages are already included.
 \documentclass[a4paper, 11pt]{article}
-\usepackage[utf8]{inputenc} % Change according your file encoding
+\usepackage[utf8]{inputenc}
+\usepackage{float}
 \usepackage{graphicx}
 \usepackage{url}
+\usepackage{enumitem}
+\usepackage{subcaption}
+
+\setlist[itemize]{itemsep=0.5pt, parsep=0.5pt, topsep=0pt, partopsep=0pt}
+\setlist[enumerate]{itemsep=0.5pt, parsep=0.5pt, topsep=0pt, partopsep=0pt}
 
 %opening
-\title{Report X: Homework Report Template}
-\author{Your name}
+\title{HW2 Report, Rudy: A Small Routing Protocol}
+\author{David Fischer}
 \date{\today{}}
 
 \begin{document}
@@ -24,6 +29,10 @@ Why is it important?
 
 \section{Main problems and solutions}
 
+\subsection{Module Based Approach}
+
+\subsection{Debugging Final Implementation}
+
 \textit{Summarize your problems, proposed solutions, etc. You do not
   need to copy\&paste your code. Only if needed, you may write down
   small code snipeds to show how you have solved a specific
@@ -32,7 +41,6 @@ Why is it important?
 Did you find any specific problem with the development of your
 solution?  How did you solve it?
 
-If you want to give a code example you can do it uing the verbatim environment.
 \begin{verbatim}
 this(X) ->
     Y = is(X),
@@ -45,87 +53,18 @@ this(X) ->
   evaluating your proposals. For each seminar, we will provide you
   with some guidance on which kind of evaluation you should do.}
 
-
-And Figures \ref{fig:results1} and \ref{fig:results2 } shows how to
-add a figure with some results. These figures have been created with
-gnuplot. There are tons of different kinds of plots that can be
-generated with gnuplot. Make sure to check out
-\url{http://gnuplot.info/demo/} and look at them so you can see what
-can you do with this program.
-
-
-\begin{figure}
+Figure \ref{fig:map1}
+\begin{figure}[H]
   \begin{center}
-    \includegraphics{results1.pdf}
-    \caption{Some random results 1}
-    \label{fig:results1}
+    \includegraphics[width=\textwidth]{graphics/map_routy.pdf}
+    \caption{Map of routers used for evaluation}
+    \label{fig:map1}
   \end{center}
 \end{figure}
-
-
-\begin{figure}
-  \begin{center}
-    \includegraphics{results2.pdf}
-    \caption{Some random results 2}
-    \label{fig:results2}
-  \end{center}
-\end{figure}
-
-To obtain these figures you have to:
-\begin{enumerate}
-
-\item Create the data file from the experiments (look at file
-  experiment.dat)
-
-\item Create a gnuplot file to create a figure in eps format (look at
-  files results1.plot and results2.plot). These files may be very
-  complex. But for the results we want to show, these examples are
-  enough. To create the eps figures, execute in terminal:
-
-\begin{verbatim}
-$> gnuplot results1.plot 
-\end{verbatim}
-
-\item As pdflatex does not recognize eps files, you must convert them
-  to pdf files. This is done by (it will generate a file
-  results1.pdf):
-
-\begin{verbatim}
-$> epstopdf results1.eps
-\end{verbatim}
-
-\item That's it! Just include the figure as shown in this template and
-  compile the latex as explained in the document ``Introduction to
-  \LaTeXe''.
-
-\end{enumerate}
-
-
-If you want, you can also create a table of results as Table
-\ref{tab:results}. If you look at the template code, you will see how
-to do a table in \LaTeX.
-
-\begin{table}[h]
-\centering
-\begin{tabular}{lcc}
-First column & Second column & Third column\\\hline
-Case 1 & 1.1 & 1.2\\\hline
-Case 2 & 2.1 & 2.2\\\hline
-Case 3 & 3.1 & 3.2\\\hline
-\end{tabular}
-\caption{Some random results in a table}
-\label{tab:results}
-\end{table}
 
 \section{Conclusions}
 
-\textit{Change the layout of this template as you want. It's only for
-  your guidance but if you feel that you need a different structure,
-  feel free to change it. The report should not be too long ($\approx$
-  2-3 pages).}
-
 What have you learnt from the problem presented?
 Was it useful?
-
 
 \end{document}
