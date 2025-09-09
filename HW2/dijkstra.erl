@@ -43,7 +43,8 @@ replace(Node, N, Gateway, Sorted) ->
 % update the list Sorted given the information that Node can be reached in N hops using Gateway.
 % If no entry is found, then no new entry is added. Only if we have a shorter path should we replace the existing entry
 update(Node, N, Gateway, Sorted) ->
-  case N < entry(Node, Sorted) of
+  Dist = entry(Node, Sorted),
+  case N < Dist of
     false ->
       Sorted;
     true ->
@@ -67,7 +68,7 @@ iterate([{Node, Length, Gateway}|Rest], Map, Table) ->
   UpdatedSorted = lists:foldl(fun(ReachableNode, AccSorted) ->
                     update(ReachableNode, Length + 1, Gateway, AccSorted)
                   end, Rest, Reachable),
-  io:format("iterate loop u: ~p m: ~p t: ~p~n", [UpdatedSorted, Map, [{Node, Gateway} | Table]]),
+  %io:format("iterate loop u: ~p m: ~p t: ~p~n", [UpdatedSorted, Map, [{Node, Gateway} | Table]]),
   iterate(UpdatedSorted, Map, [{Node, Gateway} | Table]).
 
 

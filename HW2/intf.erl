@@ -51,7 +51,7 @@ list(Intf) ->
 
 % send the message to all interface processes
 broadcast(Message, Intf) ->
-  lists:map(fun({Name, _Ref, Pid}) -> 
-                io:format("sending to ~p~n", [Name]),
+  lists:map(fun({_Name, _Ref, Pid}) -> 
+                %io:format("sending to ~p~n", [Name]),
                 Pid ! Message 
             end, Intf).

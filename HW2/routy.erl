@@ -44,8 +44,11 @@ router(Name, N, Hist, Intf, Table, Map) ->
     {'DOWN', Ref, process, _, _} ->
       {ok, Down} = intf:name(Ref, Intf),
       io:format("~w: exit received from ~w~n", [Name, Down]),
+      % purge node from interfaces, map & table
       Intf1 = intf:remove(Down, Intf),
-      router(Name, N, Hist, Intf1, Table, Map);
+      Map1 = map:delete(Down, Map),
+      Table1 = dijkstra:table(intf:list(Intf1), Map1),
+      router(Name, N, Hist, Intf1, Table1, Map1);
   
     {links, Node, R, Links} ->
       case hist:update(Node, R, Hist) of
@@ -71,16 +74,19 @@ router(Name, N, Hist, Intf, Table, Map) ->
       router(Name, N, Hist, Intf, Table, Map);
 
     {route, To, From, Message} ->
-      io:format("~w: routing message (~p)~n", [Name, Message]),
+      io:format("~w: routing message (~p)", [Name, Message]),
       case dijkstra:route(To, Table) of
         {ok, Gw} ->
           case intf:lookup(Gw, Intf) of
             {ok, Pid} ->
+              io:format(" over router ~w~n", [Gw]),
               Pid ! {route, To, From, Message};
             notfound ->
+              io:format(" over ~w/null (interface)~n", [Gw]),
               ok
           end;
         notfound ->
+          io:format(" over null (nogw)~n"),
           ok
       end,
       router(Name, N, Hist, Intf, Table, Map);

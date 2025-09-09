@@ -9,6 +9,44 @@ At the corresponding reporting seminar, you are required to present and demonstr
 https://www.erlang.org/doc/apps/stdlib/lists.html
 https://www.erlang.org/doc/apps/stdlib/sets.html#filter/2
 
+## Report Outputs
+```
+(austria@10.93.21.241)3> test:test_messages_austria().
+
+--> Bregenz to Vienna
+
+bregenz: routing message ("Servus!") over router innsbruck
+innsbruck: routing message ("Servus!") over router graz
+graz: routing message ("Servus!") over router bruckmur
+bruckmur: routing message ("Servus!") over router salzburg
+salzburg: routing message ("Servus!") over router vienna
+vienna: received message "Servus!"
+
+--> Innsbruck to Linz
+
+innsbruck: routing message ("Hello") over router graz
+graz: routing message ("Hello") over router bruckmur
+bruckmur: routing message ("Hello") over router salzburg
+salzburg: routing message ("Hello") over router vienna
+vienna: routing message ("Hello") over router linz
+linz: received message "Hello"
+
+--> ! Kill salzburg & updatelinz: exit received from salzburg
+bruckmur: exit received from salzburg
+broadcast
+update
+
+--> Bregenz to Vienna again
+
+bregenz: routing message ("Servus!")ok
+ over router innsbruck
+innsbruck: routing message ("Servus!") over router graz
+graz: routing message ("Servus!") over router wrneustadt
+wrneustadt: routing message ("Servus!") over router eisenstadt
+eisenstadt: routing message ("Servus!") over router vienna
+vienna: received message "Servus!"
+```
+
 ## Test Commands
 
 ### Routy

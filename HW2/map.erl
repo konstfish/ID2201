@@ -1,5 +1,5 @@
 -module(map).
--export([new/0, update/3, reachable/2, all_nodes/1]).
+-export([new/0, update/3, delete/2, reachable/2, all_nodes/1]).
 
 % returns an empty map
 new() ->
@@ -13,8 +13,11 @@ update(Node, Links, Map) ->
     false ->
       Map ++ NodeUpdate;
     {FoundNode, _} ->
-      lists:keydelete(FoundNode, 1, Map) ++ NodeUpdate
+      delete(FoundNode, Map) ++ NodeUpdate
   end.
+
+delete(Node, Map) ->
+  lists:keydelete(Node, 1, Map).
 
 % returns the list of nodes directly reachable
 reachable(Node, Map) ->
