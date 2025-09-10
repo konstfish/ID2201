@@ -1,5 +1,69 @@
 -module(test).
--export([setup_austria/0, update_austria/0, setup_germany/0, update_germany/0, connect_countries/1, connect_countries_germany/1, test_messages_austria/0, test_messages_cross/1]).
+-export([austria/1, germany/0, setup_austria/0, update_austria/0, setup_germany/0, update_germany/0, connect_countries/1, connect_countries_germany/1, test_messages_austria/1, test_messages_cross/1]).
+
+austria(Remote) ->
+  register(austria, spawn(fun() -> start_austria(Remote) end)).
+
+germany() ->
+  register(germany, spawn(fun() -> start_germany() end)).
+
+start_austria(Remote) ->
+  % setup nodes
+  setup_austria(),
+  {germany, Remote} ! setup,
+
+  % init austria test
+  test_messages_austria(true),
+
+  % connect countries
+  connect_countries(Remote),
+  timer:sleep(300),
+  {germany, Remote} ! {connect, node()},
+  {germany, Remote} ! log, 
+  timer:sleep(1000),
+
+  update_austria(),
+  timer:sleep(200),
+  {germany, Remote} ! update,
+  {germany, Remote} ! log, 
+
+  % retest austria
+  test_messages_austria(true),
+  
+  {germany, Remote} ! log, 
+  timer:sleep(1000),
+  
+  % init cross test
+  test_messages_cross(Remote),
+
+  % prep salzburg down
+  spawn(fun() -> 
+		timer:sleep(2500),
+    {germany, Remote} ! update,
+    update_austria()
+	end),
+
+  {germany, Remote} ! log, 
+  % kill salzburg
+  test_messages_austria(false),
+
+  {germany, Remote} ! log, 
+  % retest remote messages
+  test_messages_cross(Remote).
+
+start_germany() ->
+  receive
+    setup ->
+      setup_germany();
+    update ->
+      update_germany();
+    log ->
+      io:format("~n");
+    {connect, Austria} ->
+      io:format("connect from ~w~n", [Austria]),
+      connect_countries_germany(Austria)
+  end,
+  start_germany().
 
 setup_austria() ->
     routy:start(vienna, vienna),
@@ -45,15 +109,12 @@ setup_austria() ->
     % innsbruck -> graz
     innsbruck ! {add, graz, {graz, node()}},
 
-    % twice, once for link propagation, second for map updates
-    update_austria(),
     update_austria(),
     
     io:format("austria network setup complete on: ~w~n", [node()]).
 
 update_austria() ->
     timer:sleep(100),
-    io:format("broadcast~n"),
     vienna ! broadcast,
     linz ! broadcast,
     wrneustadt ! broadcast,
@@ -65,7 +126,6 @@ update_austria() ->
     catch(salzburg ! broadcast),
     
     timer:sleep(100),
-    io:format("update~n"),
     vienna ! update,
     linz ! update,
     wrneustadt ! update,
@@ -75,6 +135,7 @@ update_austria() ->
     innsbruck ! update,
     bregenz ! update,
     catch(salzburg ! update),
+
     ok.
 
 setup_germany() ->
@@ -101,7 +162,6 @@ setup_germany() ->
     % cologne -> frankfurt
     cologne ! {add, frankfurt, {frankfurt, node()}},
     
-    update_germany(),
     update_germany(),
 
     io:format("germany network setup complete on: ~w~n", [node()]).
@@ -132,7 +192,9 @@ connect_countries(Remote) ->
     bregenz ! {add, stuttgart, {stuttgart, Remote}},
     {munich, Remote} ! {add, bregenz, {bregenz, node()}},
 
-    io:format("austria connected to germany, update routing table manually~n").
+    update_austria(),
+
+    io:format("--> ! austria connected to germany~n").
 
 connect_countries_germany(Remote) ->
     % munich -> salzburg
@@ -141,10 +203,12 @@ connect_countries_germany(Remote) ->
     % stuttgart -> bregenz
     stuttgart ! {add, bregenz, {bregenz, Remote}},
 
-    io:format("germany connected to austria, update routing table manually~n").
+    update_germany(),
+
+    io:format("--> ! germany connected to austria~n").
 
 %% test messages
-test_messages_austria() ->
+test_messages_austria(true) ->
     io:format("~n--> Bregenz to Vienna~n~n"),
     bregenz ! {send, vienna, "Servus!"},
 
@@ -154,13 +218,17 @@ test_messages_austria() ->
     innsbruck ! {send, linz, "Hello"},
 
     timer:sleep(1000),
+    ok;
+test_messages_austria(false) ->
+    test_messages_austria(true),  
 
-    io:format("~n--> ! Kill salzburg & update"),
+    io:format("~n--> ! Kill salzburg & update~n"),
     salzburg ! stop,
     timer:sleep(250),
     update_austria(),
 
-    timer:sleep(300),
+    io:format("NOTE: update other countries as well~n"),
+    timer:sleep(2500),
     io:format("~n--> Bregenz to Vienna again~n~n"),
     bregenz ! {send, vienna, "Servus!"},
     ok.
@@ -168,4 +236,10 @@ test_messages_austria() ->
 test_messages_cross(Remote) ->
     io:format("~n--> Berlin to Vienna~n~n"),
     {berlin, Remote} ! {send, vienna, "Ne"},
+
+    timer:sleep(1000),
+
+    io:format("~n--> Wr. Neustadt to Cologne~n~n"),
+    wrneustadt ! {send, cologne, "Krapfen"},
+
     ok.

@@ -23,17 +23,9 @@ router(Name, N, Hist, Intf, Table, Map) ->
       Ref = erlang:monitor(process, Pid),
       io:format("got ref ~w~n", [Ref]),
       Intf1 = intf:add(Node, Ref, Pid, Intf),
+      %self() ! broadcast,
+      %self() ! update,
       router(Name, N, Hist, Intf1, Table, Map);
-
-    {addupdate, Node, Pid} ->
-      Ref = erlang:monitor(process, Pid),
-      io:format("got ref ~w~n", [Ref]),
-      Intf1 = intf:add(Node, Ref, Pid, Intf),
-      % update & brodcast
-      Message = {links, Name, N, intf:list(Intf1)},
-      intf:broadcast(Message, Intf1),
-      Table1 = dijkstra:table(intf:list(Intf1), Map),
-      router(Name, N+1, Hist, Intf1, Table1, Map);
 
     {remove, Node} ->
       {ok, Ref} = intf:ref(Node, Intf),
@@ -42,21 +34,29 @@ router(Name, N, Hist, Intf, Table, Map) ->
       router(Name, N, Hist, Intf1, Table, Map);
 
     {'DOWN', Ref, process, _, _} ->
-      {ok, Down} = intf:name(Ref, Intf),
-      io:format("~w: exit received from ~w~n", [Name, Down]),
-      % purge node from interfaces, map & table
-      Intf1 = intf:remove(Down, Intf),
-      Map1 = map:delete(Down, Map),
-      Table1 = dijkstra:table(intf:list(Intf1), Map1),
-      router(Name, N, Hist, Intf1, Table1, Map1);
-  
+      case intf:name(Ref, Intf) of
+        {ok, Down} ->
+          io:format("~w: exit received from ~w~n", [Name, Down]),
+          Intf1 = intf:remove(Down, Intf),
+          Map1 = map:delete(Down, Map),
+          Table1 = dijkstra:table(intf:list(Intf1), Map1),
+          %self() ! broadcast,
+          %self() ! update,
+          router(Name, N, Hist, Intf1, Table1, Map1);
+        notfound ->
+          io:format("~w: exit for unknown reference from ~w~n", [Name, Ref]),
+          router(Name, N, Hist, Intf, Table, Map)
+      end;
+
     {links, Node, R, Links} ->
       case hist:update(Node, R, Hist) of
         {new, Hist1} ->
+          %io:format("~w got new message~n", [Node]),
           intf:broadcast({links, Node, R, Links}, Intf),
           Map1 = map:update(Node, Links, Map),
           router(Name, N, Hist1, Intf, Table, Map1);
         old ->
+          %io:format("~w got old message~n", [Node]),
           router(Name, N, Hist, Intf, Table, Map)
       end;
 
@@ -69,25 +69,30 @@ router(Name, N, Hist, Intf, Table, Map) ->
       intf:broadcast(Message, Intf),
       router(Name, N+1, Hist, Intf, Table, Map);
 
-    {route, Name, _From, Message} ->
-      io:format("~w: received message ~p~n", [Name, Message]),
-      router(Name, N, Hist, Intf, Table, Map);
+    %{route, Name, _From, Message} ->
+    %  io:format("~w: received message ~p~n", [Name, Message]),
+    %  router(Name, N, Hist, Intf, Table, Map);
 
     {route, To, From, Message} ->
-      io:format("~w: routing message (~p)", [Name, Message]),
-      case dijkstra:route(To, Table) of
-        {ok, Gw} ->
-          case intf:lookup(Gw, Intf) of
-            {ok, Pid} ->
-              io:format(" over router ~w~n", [Gw]),
-              Pid ! {route, To, From, Message};
+      case To =:= Name of
+        true ->
+          io:format("~w: received message ~p~n", [Name, Message]);
+        false ->
+          LogStart = io_lib:format("~w: routing message (~p)", [Name, Message]),
+          case dijkstra:route(To, Table) of
+            {ok, Gw} ->
+              case intf:lookup(Gw, Intf) of
+                {ok, Pid} ->
+                  io:format("~s over router ~w~n", [LogStart, Gw]),
+                  Pid ! {route, To, From, Message};
+                notfound ->
+                  io:format("~s over ~w/null (interface)~n", [LogStart, Gw]),
+                  ok
+              end;
             notfound ->
-              io:format(" over ~w/null (interface)~n", [Gw]),
+              io:format("~s over null (nogw)~n", [LogStart]),
               ok
-          end;
-        notfound ->
-          io:format(" over null (nogw)~n"),
-          ok
+          end
       end,
       router(Name, N, Hist, Intf, Table, Map);
 

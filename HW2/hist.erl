@@ -8,7 +8,7 @@ new(Name) ->
 % check if message number N from Node is old or new. If it is old, return `old`, if it is new, return {new, Updated}
 % where Updated is the new history
 update(Node, N, History) ->
-  MaxSeen = maps:get(Node, History, 0),
+  MaxSeen = maps:get(Node, History, -1),
 
   if
     MaxSeen < N ->

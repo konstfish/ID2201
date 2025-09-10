@@ -7,7 +7,8 @@ new() ->
 
 % add a new entry to the list and return the new list of interfaces
 add(Name, Ref, Pid, Intf) ->
-   [{Name, Ref, Pid} | Intf].
+  Intf1 = remove(Name, Intf),
+  [{Name, Ref, Pid} | Intf1].
 
 % remove an entry given a name of an instance, return a new list of interfaces
 remove(Name, Intf) ->
