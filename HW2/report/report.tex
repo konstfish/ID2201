@@ -31,7 +31,18 @@ Why is it important?
 
 \subsection{Module Based Approach}
 
+% trouble starting out & seeing bigger picture/correlation
+% solved by: writing test functions based on report contents
+
 \subsection{Debugging Final Implementation}
+
+% logging difficulties, router processes dilluting log output
+% solved by cleaning up logging
+
+\subsection{Duplicate Updates and Broadcasts}
+
+% biggest troubling issue I couldn't get to the bottom of, because it didn't really matter for testing (2 updates sufficed)
+% solved by manually stepping through the code and adding logging at the critical sections
 
 \textit{Summarize your problems, proposed solutions, etc. You do not
   need to copy\&paste your code. Only if needed, you may write down
@@ -49,9 +60,9 @@ this(X) ->
 
 \section{Evaluation}
 
-% removing routers either through deletion or them going down can cause infinite loops between routers
+To efficiently evaluate and debug the implementation, a testing module to set up multiple nodes, their connections, and messaging across different countries (machines) was created.
+Figure \ref{fig:map1} shows the complete testing environment.
 
-Figure \ref{fig:map1}
 \begin{figure}[H]
   \begin{center}
     \includegraphics[width=\textwidth]{graphics/map_routy.pdf}
@@ -60,7 +71,22 @@ Figure \ref{fig:map1}
   \end{center}
 \end{figure}
 
+% removing routers either through deletion or them going down can cause infinite loops between routers
+
+%  1. salzburg goes down
+% 2. vienna detects the 'DOWN' message and removes salzburg from its routing table
+% 3. But linz still thinks salzburg exists and has a route to vienna through salzburg
+% 4. When you send a message to vienna:
+%   - linz routes it to salzburg (which is dead)
+%   - The message bounces back or gets lost
+%   - Or worse, if there are backup paths, it creates routing loops
+
+
 \section{Conclusions}
+
+% many of the functions aren't implemented as functional, you can tell the object oriented background
+
+% future development: automatically/periodically update & broadcast like OSPF, proper logging, reducing the size of the router function in the routy module
 
 What have you learnt from the problem presented?
 Was it useful?

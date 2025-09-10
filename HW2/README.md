@@ -142,36 +142,21 @@ intf:lookup(london, I3).
 ### History
 
 ```erlang
-% Test 1: Create a new history for 'london'
 H1 = hist:new(london).
 
-% Test 2: First message from 'paris' (should be new)
 {new, H2} = hist:update(paris, 5, H1).
 
-% Test 3: Lower message from 'paris' (should be old)
 hist:update(paris, 3, H2).
 
-% Test 4: Same message number from 'paris' (should be old)  
 hist:update(paris, 5, H2).
 
-% Test 5: Higher message from 'paris' (should be new)
 {new, H3} = hist:update(paris, 8, H2).
-
-% Test 6: Any message from 'london' should be old (due to inf)
 hist:update(london, 999, H3).
 hist:update(london, 1, H3).
-
-% Test 7: First message from a new node 'berlin' (should be new)
 {new, H4} = hist:update(berlin, 1, H3).
 
-% Test 8: Check the history contents
-H4.
-
-% Test 9: Multiple nodes
 {new, H5} = hist:update(madrid, 10, H4),
 {new, H6} = hist:update(rome, 7, H5),
 H6.
-
-% Test 10: Old message from madrid
 hist:update(madrid, 5, H6).
 ```
