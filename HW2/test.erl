@@ -25,16 +25,18 @@ start_austria(Remote) ->
   update_austria(),
   timer:sleep(200),
   {germany, Remote} ! update,
-  {germany, Remote} ! log, 
+  {germany, Remote} ! {log, "--> Message set Austria to Austria"}, 
 
   % retest austria
   test_messages_austria(true),
   
-  {germany, Remote} ! log, 
+  {germany, Remote} ! {log, "--> Initial cross Country"}, 
   timer:sleep(1000),
   
   % init cross test
   test_messages_cross(Remote),
+
+  timer:sleep(500),
 
   % prep salzburg down
   spawn(fun() -> 
@@ -43,11 +45,13 @@ start_austria(Remote) ->
     update_austria()
 	end),
 
-  {germany, Remote} ! log, 
+  {germany, Remote} ! {log, "--> Salzburg being killed"}, 
   % kill salzburg
   test_messages_austria(false),
 
-  {germany, Remote} ! log, 
+  timer:sleep(500),
+
+  {germany, Remote} ! {log, "--> Final cross Country"}, 
   % retest remote messages
   test_messages_cross(Remote).
 
@@ -59,6 +63,8 @@ start_germany() ->
       update_germany();
     log ->
       io:format("~n");
+    {log, Message} ->
+      io:format("~n~s~n~n", [Message]);
     {connect, Austria} ->
       io:format("connect from ~w~n", [Austria]),
       connect_countries_germany(Austria)
@@ -227,10 +233,11 @@ test_messages_austria(false) ->
     timer:sleep(250),
     update_austria(),
 
-    io:format("NOTE: update other countries as well~n"),
+    %io:format("NOTE: update other countries as well~n"),
     timer:sleep(2500),
     io:format("~n--> Bregenz to Vienna again~n~n"),
     bregenz ! {send, vienna, "Servus!"},
+    timer:sleep(400),
     ok.
 
 test_messages_cross(Remote) ->

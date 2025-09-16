@@ -44,7 +44,7 @@ router(Name, N, Hist, Intf, Table, Map) ->
           %self() ! update,
           router(Name, N, Hist, Intf1, Table1, Map1);
         notfound ->
-          io:format("~w: exit for unknown reference from ~w~n", [Name, Ref]),
+          % io:format("~w: exit for unknown reference from ~w~n", [Name, Ref]),
           router(Name, N, Hist, Intf, Table, Map)
       end;
 

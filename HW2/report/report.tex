@@ -52,11 +52,16 @@ Additionally, to make routers always interpret their own messages as old, Erlang
 \section{Evaluation}
 
 To efficiently evaluate and debug the implementation, a testing module to set up multiple routers, connections, and messaging across different countries, or machines, was created.
-Figure \ref{fig:map1} shows the complete testing environment with nine routers in Austria and five routers in Germany with directional and bidirectional connections.
+Figure \ref{fig:map1} is an approximate illustration of the testing environment including nine routers in Austria and five routers in Germany with directional and bidirectional connections.
+
+This setup proved crucial in confirming functionality and analyzing the behavior of the distributed system, also helping identify many of the nuances of this link-state implementation. 
+The most significant learnings came from shutting down individual routers and seeing the Dijkstra algorithm compute new optimal paths going around the outage, or correctly identifying that certain routers are now unreachable through the \texttt{entry/2} function.
+This also caused the most interesting edge case when broadcasts and updates aren't propagated through the entire network, leading to infinite message routing loops between two nodes.
+This occurs when a router doesn't have an up to date view and tries to communicate over another router which does. In the worst case, the second node has identified the message path to go back over the original router, leading them to continuously send the message back and forth.
 
 \begin{figure}[H]
   \begin{center}
-    \includegraphics[width=300px]{graphics/map_routy.pdf}
+    \includegraphics[width=345px]{graphics/map_routy.pdf}
     \caption{Map of routers used for evaluation.}
     \label{fig:map1}
   \end{center}
@@ -74,11 +79,10 @@ Figure \ref{fig:map1} shows the complete testing environment with nine routers i
 
 \section{Conclusions}
 
-% many of the functions aren't implemented as functional, you can tell the object oriented background
+This assignment served as an excellent introduction to the inner workings of link-state protocols.
+While the sequentially implemented modules did present some initial challenges and lead to some functions being implemented unconventionally for a functional language, showing the authors object oriented background, seeing messages routed over routers written by other classmates in the "The world" bonus task was gratifying. 
+Additionally, the bonus task also reinforced the importance of common interfaces in distributed systems, as any deviation would lead to routers throwing an error or not being able to communicate.
 
-% future development: automatically/periodically update & broadcast like OSPF, proper logging, reducing the size of the router function in the routy module
-
-What have you learnt from the problem presented?
-Was it useful?
+Future development should include automatically and periodically updating and broadcasting each routers links to enable a more seamless operation, a separate logging module to handle log levels and structured output, and reducing the complexity and size of the \texttt{router/6} function in the \textit{routy} module.
 
 \end{document}
