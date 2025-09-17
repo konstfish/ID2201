@@ -22,6 +22,7 @@ clock(Nodes) ->
   % super clean ngl 
   maps:from_list([{Name, zero()} || Name <- Nodes]).
 
+
 % return a clock that has been updated given that we have recieved a log message from a node at a given time
 update(Node, Time, Clock) ->
   %maps:update(Node, Time, Clock).
