@@ -24,8 +24,8 @@ loop(Name, Log, Peers, Sleep, Jitter, Time) ->
   Wait = random:uniform(Sleep),
   receive
     {msg, Time2, Msg} ->
-      Log ! {log, Name, Time2, {received, Msg}},
       Time3 = time:inc(Name, time:merge(Time, Time2)),
+      Log ! {log, Name, Time3, {received, Msg}},
       loop(Name, Log, Peers, Sleep, Jitter, Time3);
     stop ->
       ok;
