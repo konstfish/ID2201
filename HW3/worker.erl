@@ -1,18 +1,18 @@
 -module(worker).
 
--export([start/5, stop/1, peers/2]).
+-export([start/6, stop/1, peers/2]).
 
-start(Name, Logger, Seed, Sleep, Jitter) ->
-  spawn_link(fun() -> init(Name, Logger, Seed, Sleep, Jitter) end).
+start(Module, Name, Logger, Seed, Sleep, Jitter) ->
+  spawn_link(fun() -> init(Module, Name, Logger, Seed, Sleep, Jitter) end).
 
 stop(Worker) ->
   Worker ! stop.
 
-init(Name, Log, Seed, Sleep, Jitter) ->
+init(Module, Name, Log, Seed, Sleep, Jitter) ->
   random:seed(Seed, Seed, Seed),
   receive
     {peers, Peers} ->
-      loop(Name, Log, Peers, Sleep, Jitter, vect:zero());
+      loop(Module, Name, Log, Peers, Sleep, Jitter, apply(Module, zero, []));
     stop ->
       ok
   end.
@@ -20,25 +20,26 @@ init(Name, Log, Seed, Sleep, Jitter) ->
 peers(Wrk, Peers) ->
   Wrk ! {peers, Peers}.
 
-loop(Name, Log, Peers, Sleep, Jitter, Time) ->
+loop(Module, Name, Log, Peers, Sleep, Jitter, Time) ->
   Wait = random:uniform(Sleep),
   receive
     {msg, Time2, Msg} ->
-      Time3 = vect:inc(Name, vect:merge(Time, Time2)),
+      Time3 = apply(Module, inc, [Name, apply(Module, merge, [Time, Time2])]),
+      % Time3 = vect:inc(Name, vect:merge(Time, Time2)),
       Log ! {log, Name, Time3, {received, Msg}},
-      loop(Name, Log, Peers, Sleep, Jitter, Time3);
+      loop(Module, Name, Log, Peers, Sleep, Jitter, Time3);
     stop ->
       ok;
     Error ->
       Log ! {log, Name, time, {error, Error}}
   after Wait ->
       Selected = select(Peers),
-      Time2 = vect:inc(Name, Time),
+      Time2 = apply(Module, inc, [Name, Time]),
       Message = {hello, random:uniform(100)},
       Selected ! {msg, Time2, Message},
       jitter(Jitter),
       Log ! {log, Name, Time2, {sending, Message}},
-      loop(Name, Log, Peers, Sleep, Jitter, Time2)
+      loop(Module, Name, Log, Peers, Sleep, Jitter, Time2)
   end.
 
 select(Peers) ->

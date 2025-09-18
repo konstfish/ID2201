@@ -30,6 +30,8 @@ clock(_) ->
 
 update(Node, Time, Clock) ->
   % merge(Time, Clock).
+  %
+  % TODO: this is not correct
   case maps:find(Node, Clock) of
     {ok, Cur} ->
       maps:update(Node, max(Cur, maps:get(Node, Time, 0)), Clock);

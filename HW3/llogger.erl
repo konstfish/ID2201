@@ -1,30 +1,32 @@
 -module(llogger).
 
--export([start/1, stop/1]).
+-export([start/2, stop/1]).
 
-start(Nodes) ->
-  spawn_link(fun() -> init(Nodes) end).
+start(Module, Nodes) ->
+  io:format("loggy: starting with module ~w~n", [Module]),
+  spawn_link(fun() -> init(Module, Nodes) end).
 
 stop(Logger) ->
   Logger ! stop.
 
-init(Nodes) ->
-  loop(vect:clock(Nodes), []).
+init(Module, Nodes) ->
+  loop(Module, apply(Module, clock, [Nodes]), []).
 
-loop(Clock, Holdback) ->
+loop(Module, Clock, Holdback) ->
   receive
     {log, From, Time, Msg} ->
-      Clock1 = vect:update(From, Time, Clock),
+      Clock1 = apply(Module, update, [From, Time, Clock]),
+      %Clock1 = vect:update(From, Time, Clock),
       %Clock1 = vect:merge(Clock, Time),
       %H1 = Holdback ++ [{log, From, Time, Msg}],
       H1 = lists:sort(fun({log, _, T1, _}, {log, _, T2, _}) -> 
-                        vect:leq(T1, T2) 
+                        apply(Module, leq, [T1, T2]) 
                       end,
                       Holdback ++ [{log, From, Time, Msg}]),
 
 
       {Safe, Unsafe} = lists:partition(
-        fun({log, _From, Time1, _Msg}) -> vect:safe(Time1, Clock1) end,
+        fun({log, _From, Time1, _Msg}) -> apply(Module, safe, [Time1, Clock1]) end,
         H1
       ),
 
@@ -39,7 +41,7 @@ loop(Clock, Holdback) ->
       %  false ->
       %    self() ! {log, From, Time, Msg}
       %end,
-      loop(Clock1, Unsafe);
+      loop(Module, Clock1, Unsafe);
     stop ->
       ok
   end.
