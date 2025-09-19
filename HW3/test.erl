@@ -4,7 +4,10 @@
 
 % report on your initial observations
 run(Module, Sleep, Jitter) ->
-  Log = llogger:start(Module, [john, paul, ringo, george]),
+  Workers = [john, paul, ringo, george],
+  mermaid:start(),
+
+  Log = llogger:start(Module, Workers),
   A = worker:start(Module, john, Log, 13, Sleep, Jitter),
   B = worker:start(Module, paul, Log, 23, Sleep, Jitter),
   C = worker:start(Module, ringo, Log, 36, Sleep, Jitter),
@@ -18,4 +21,7 @@ run(Module, Sleep, Jitter) ->
   worker:stop(A),
   worker:stop(B),
   worker:stop(C),
-  worker:stop(D).
+  worker:stop(D),
+
+  mermaid:log(),
+  mermaid:stop().
