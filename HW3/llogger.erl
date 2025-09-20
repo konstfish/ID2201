@@ -32,6 +32,7 @@ loop(Module, Clock, Holdback) ->
 
       lists:foreach(
         fun({log, From2, Time2, Msg2}) ->
+          %io:format("~w~n", [Unsafe]),
           log(From2, Time2, Msg2, length(Unsafe))
         end, Safe
       ),
