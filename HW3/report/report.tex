@@ -44,19 +44,41 @@
 
 To aid evaluation, a module \textit{mermaid} was implemented to create visual representations of the messages flowing between the vector clocks.
 
-See appendix. (TODO, proper sendoff)
+See appendix. (TODO, proper sendoff to the appendix, google how)
 
 \subsection{Delay caused by Jitter Comparison of Lamport and Vector}
+% TODO: title here
 
-% TODO: write some code here to auto-test the lamport & vector clocks to correlate jitter with maximum queue size, should be easy enough
-% TODO: actually validate that the queue size isn't too big, logging seems weird right now
+Due to the inherit randomness of the \textit{Loggy} implementation these results can't be taken as absolutes for corelating sleep or jitter to the maximum queue size, although the difference 
 
-% graph here of the two clocks (jitter/queue size)
+\begin{figure}[H]
+  \begin{center}
+    \begin{subfigure}[b]{0.494\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{test/jitter.pdf}
+      \caption{Comparison of Jitter using a 1500ms Sleep}
+      \label{fig:results1}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.494\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{test/sleep.pdf}
+      \caption{Comparison of Sleep using a 250ms Jitter}
+      \label{fig:results2}
+    \end{subfigure}
+  \end{center}
+  \caption{Queue size comparison between the clock implementations on different delays and jitters}
+  \label{fig:comparison}
+\end{figure}
+
+% TODO: actually validate that the queue size isn't too big, logging seems weird right now, confirmed i'm just stupid the queue size is always printed by all the same logging outs
 
 \section{Conclusions}
 
 % something about vector clocks
 
+
+\newpage
 \section{Appendix}
 
 Both of these tests were completed using test:run(<module>, 1500, 500).
@@ -94,6 +116,7 @@ log: s:3   ringo  sending  ( 83) c:14
 log: s:3   george received ( 83) c:15
 log: s:3   ringo  received (  1) c:15
 \end{verbatim}
+% \caption{Test execution of the lamport clock}
 
 \begin{figure}[H]
   \begin{center}

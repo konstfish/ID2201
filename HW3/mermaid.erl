@@ -1,12 +1,15 @@
 -module(mermaid).
 
--export([start/0, stop/0, submit/1]).
+-export([start/0, stop/0, log/0, submit/1]).
 
 start() ->
   register(mermaid, spawn(fun() -> listen([]) end)).
 
 stop() ->
   mermaid ! stop.
+
+log() ->
+  mermaid ! log.
 
 submit(Message) ->
   catch(mermaid ! Message).

@@ -1,9 +1,10 @@
 -module(test).
 
--export([run/3]).
+-export([run/3, record/0, jitterrun/4]).
 
-% report on your initial observations
 run(Module, Sleep, Jitter) ->
+  io:format("sleep: ~w, timer: ~w~n", [Sleep, Jitter]),
+
   Workers = [john, paul, ringo, george],
   mermaid:start(),
 
@@ -25,3 +26,40 @@ run(Module, Sleep, Jitter) ->
 
   mermaid:log(),
   mermaid:stop().
+  
+
+record() ->
+  register(recorder, spawn(fun() -> recorder(0) end)).
+
+recorder(Cur) ->
+  receive
+    {get, Pid} ->
+      Pid ! {recorder_value, Cur},
+      recorder(0);
+    reset ->
+      recorder(0);
+    New ->
+      case New > Cur of
+        true ->
+          recorder(New);
+        false ->
+          recorder(Cur)
+      end
+  end.
+
+jitterrun(_Module, 3000, _Jitter, Hist) ->
+  maps:fold(fun(Key, Value, _Acc) ->
+        io:format("~w,~w~n", [Key, Value]),
+        ok
+    end, ok, Hist);
+jitterrun(Module, Sleep, Jitter, Hist) ->
+  recorder ! reset,
+  run(Module, Sleep, Jitter),
+  recorder ! {get, self()},
+  receive
+    {recorder_value, Value} ->
+      H1 = maps:put(Sleep, Value, Hist)
+  end,
+  jitterrun(Module, Sleep+100, Jitter, H1).
+
+

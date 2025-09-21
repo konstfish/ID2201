@@ -30,6 +30,8 @@ loop(Module, Clock, Holdback) ->
         H1
       ),
 
+      catch(recorder ! length(Unsafe)),
+
       lists:foreach(
         fun({log, From2, Time2, Msg2}) ->
           %io:format("~w~n", [Unsafe]),
@@ -47,8 +49,6 @@ loop(Module, Clock, Holdback) ->
       ok
   end.
 
-log(From, Time, Msg) ->
-  io:format("log: ~w ~w ~p~n", [Time, From, Msg]).
 log(From, Time, {Act, {_, Msg}}, Size) ->
   io:format("log: s:~-3w ~-6s ~-8w (~3w) c:~w~n", [Size, From, Act, Msg, Time]).
 
