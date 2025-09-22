@@ -19,26 +19,41 @@
 \maketitle
 
 \section{Introduction}
-% waffle about lamport clocks & vector clocks, their importance in different applications like storage replication
+Lamport and vector clocks serve as fundamental tools that enable causal ordering in distributed systems. Though implementations might differ, their core principles are still represented in multiple areas such as distributed tracing, message queues, and distributed garbage collection.
+This assignments goal was the implementation of \textit{Loggy}, a logging procedure continually receiving random messages on a random delay from workers.
 
-% a bit about what was implemented (central logger with a holdback queue, two clock modules, lamport and vector, workers who send messages between eachother on a random delay with random jitter between sending/recieving and reporting to the logger)
+The implementation spans a central logging module with a holdback queue to correctly print messages, workers sending and receiving messages between each other on a random delay with random jitters before reporting to the central logger, two clock modules, Lamport and vector based, and multiple analytics modules to generate insights.
 
 \section{Main problems and solutions}
 
-\subsection{}
+\subsection{Validating Order}
+
+
 
 % something about difficulties validating if the clocks, especially the vector clocks, are functioning correctly, solved in chart maker with evaluation
 
-\subsection{}
+\subsection{Log Parsing}
 
 % difficulty reading the log until the log output was made clean using the built in padding
 
-\subsection{}
+\subsection{Holdback Queue Implementation}
 
+% from assignment: How do we know if messages are safe to print?
+% from assignment: You are also to write a report that describes your time module
 % holdback queue implementation, difficulty mentally parsing the queue size/why it jumps so massively
 
+% Did you detect entries out of order in the first implementation, and if so, how did you detect them? 
+% What is it that the final log tells us? Did events happen in the order presented by the log? 
+% How large will the holdback queue be, make some tests and try to find the maximum number of entries.
+
+%Did events happen in the order presented by the log?
+%How large will the holdback queue be, make some tests and try to find the maximum number of entries.
 
 \section{Evaluation}
+
+% Do some tests and identify situations where log entries are printed in the wrong order. 
+% How do you identify messages that are in the wrong order?
+% What is always true, and what is sometimes true? How do you play it safe?
 
 \subsection{Visualization}
 
@@ -46,10 +61,8 @@ To aid evaluation, a module \textit{mermaid} was implemented to create visual re
 
 See appendix. (TODO, proper sendoff to the appendix, google how)
 
-\subsection{Delay caused by Jitter Comparison of Lamport and Vector}
-% TODO: title here
+\subsection{Queue Size Comparison}
 
-Due to the inherit randomness of the \textit{Loggy} implementation these results can't be taken as absolutes for corelating sleep or jitter to the maximum queue size, although the difference 
 
 \begin{figure}[H]
   \begin{center}
@@ -71,9 +84,20 @@ Due to the inherit randomness of the \textit{Loggy} implementation these results
   \label{fig:comparison}
 \end{figure}
 
-% TODO: actually validate that the queue size isn't too big, logging seems weird right now, confirmed i'm just stupid the queue size is always printed by all the same logging outs
+Due to the inherit randomness of the \textit{Loggy} implementation these results can't be taken as absolutes for corelating sleep or jitter to the maximum queue size.
+Still, the difference between the maximum size of the Lamport queue when compared to the vector queue demonstrates the logging throughput being greater, at the cost of larger messages.
+
+% actually validate that the queue size isn't too big, logging seems weird right now, 
+% CONFIRMED: i'm just stupid the queue size is always printed by all the same logging outs
+
 
 \section{Conclusions}
+
+% Is this not exactly what we have done in the Lamport clock solution?
+
+An interesting part of this \textit{Loggy} implementation was the similarity between the full Lamport clock and the individual times held by the vector clock workers.
+Concluding, the vector implementation is similar to the Lamport implementation at its core due to the shared methodology of incrementing a simple value to represent [the state in time ]
+
 
 % something about vector clocks
 
