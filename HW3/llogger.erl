@@ -38,6 +38,10 @@ loop(Module, Clock, Holdback) ->
           log(From2, Time2, Msg2, length(Unsafe))
         end, Safe
       ),
+
+      %io:format("tm: ~w~n", [Time]),
+      %io:format("c0: ~w~n", [Clock]),
+      %io:format("c1: ~w~n", [Clock1]),
       %case vect:safe(Time, Clock1) of
       %  true ->
       %    log(From, Time, Msg, Clock);

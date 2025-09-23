@@ -28,26 +28,37 @@ The implementation spans a central logging module with a holdback queue to corre
 
 \subsection{Validating Order}
 
-
-
-% something about difficulties validating if the clocks, especially the vector clocks, are functioning correctly, solved in chart maker with evaluation
-
-\subsection{Log Parsing}
-
-% difficulty reading the log until the log output was made clean using the built in padding
+% TODO: total order here?
+Confirming the order of messages printed by \textit{Loggy} presented a challenge initially, as issues could be caused the clock and holdback queue implementation. Additionally, insight into the clock state and actual message times of each individual process was limited. 
+As the randomness of the workers is seeded, a jitter value set to \texttt{0} results in the holdback queue being skipped completely and messages being printed instantly when received. This output was then cross-checked with a regular test run.
+To further confirm total order, even with jitters greater than zero and especially for the vector clock, a \textit{mermaid} state chart graphing module was created as an observability tool. 
+% TODO: Did you detect entries out of order in the first implementation, and if so, how did you detect them? 
 
 \subsection{Holdback Queue Implementation}
 
+% TEXT: explain time module in my own words
+
+% TEXT: about holdback queue & that it utilizes leq/3 to sort the list after new entries are appended, then the safe function is used to split the list into safe and unsafe messages. In the recursion, the unsafe messages are passed to the next function call
+
 % from assignment: How do we know if messages are safe to print?
 % from assignment: You are also to write a report that describes your time module
-% holdback queue implementation, difficulty mentally parsing the queue size/why it jumps so massively
 
-% Did you detect entries out of order in the first implementation, and if so, how did you detect them? 
 % What is it that the final log tells us? Did events happen in the order presented by the log? 
-% How large will the holdback queue be, make some tests and try to find the maximum number of entries.
 
-%Did events happen in the order presented by the log?
-%How large will the holdback queue be, make some tests and try to find the maximum number of entries.
+\subsection{Log Parsing}
+
+Once the vector clock module was implemented mentally parsing the \textit{Loggy} output.
+To ease the load control sequences were utilized to format the logged messages in a more coherent and readable way.
+
+\begin{verbatim}
+io:format("log: s:~-3w ~-6s ~-8w (~3w) c:~w~n", 
+          [Size, From, Act, Msg, Time]).
+% log: s:0   john   sending  (  6) c:john => 1
+% log: s:0   paul   received ( 26) c:john => 1,paul => 1
+\end{verbatim}
+
+% difficulty reading the log until the log output was made clean using the built in padding
+
 
 \section{Evaluation}
 
@@ -62,6 +73,9 @@ To aid evaluation, a module \textit{mermaid} was implemented to create visual re
 See appendix. (TODO, proper sendoff to the appendix, google how)
 
 \subsection{Queue Size Comparison}
+
+%Did events happen in the order presented by the log?
+%How large will the holdback queue be, make some tests and try to find the maximum number of entries.
 
 
 \begin{figure}[H]
@@ -105,7 +119,7 @@ Concluding, the vector implementation is similar to the Lamport implementation a
 \newpage
 \section{Appendix}
 
-Both of these tests were completed using test:run(<module>, 1500, 500).
+Both of these tests were completed using \texttt{test:run(<module>, 1500, 500).}
 
 \subsection{Lamport Clock}
 \begin{verbatim}
