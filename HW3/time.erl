@@ -20,7 +20,10 @@ leq(Ti, Tj) ->
 % return a clock that can keep track of the nodes
 clock(Nodes) ->
   % super clean ngl 
-  maps:from_list([{Name, zero()} || Name <- Nodes]).
+  % maps:from_list([{Name, zero()} || Name <- Nodes]).
+  lists:foldl(fun(Node, Acc) ->
+                maps:put(Node, zero(), Acc)
+              end, maps:new(), Nodes).
 
 % return a clock that has been updated given that we have recieved a log message from a node at a given time
 update(Node, Time, Clock) ->

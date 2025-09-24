@@ -3,7 +3,7 @@
 -export([run/3, record/0, jitterrun/4]).
 
 run(Module, Sleep, Jitter) ->
-  io:format("sleep: ~w, timer: ~w~n", [Sleep, Jitter]),
+  io:format("test: sleep: ~w, timer: ~w~n", [Sleep, Jitter]),
 
   Workers = [john, paul, ringo, george],
   mermaid:start(),

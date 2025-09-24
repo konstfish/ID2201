@@ -3,7 +3,7 @@
 -export([start/2, stop/1]).
 
 start(Module, Nodes) ->
-  io:format("loggy: starting with module ~w~n", [Module]),
+  io:format("log: starting with module ~w~n", [Module]),
   spawn_link(fun() -> init(Module, Nodes) end).
 
 stop(Logger) ->
@@ -29,8 +29,8 @@ loop(Module, Clock, Holdback) ->
         fun({log, _From, Time1, _Msg}) -> apply(Module, safe, [Time1, Clock1]) end,
         H1
       ),
-
-      catch(recorder ! length(Unsafe)),
+      
+      % catch(recorder ! length(Unsafe)),
 
       lists:foreach(
         fun({log, From2, Time2, Msg2}) ->

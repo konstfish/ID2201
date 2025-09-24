@@ -45,7 +45,7 @@ generate(Events) ->
           
           {recieved, Process, Clock, {hello, MsgNum}} ->
               case lists:keytake(MsgNum, 3, Pending) of
-                  {value, {SendProcess, SendClock, MsgNum}, RemainingPending} ->
+                  {value, {SendProcess, SendClock, _MsgNum}, RemainingPending} ->
                       SendNote = io_lib:format("    Note over ~s: ~p~n", [SendProcess, SendClock]),
                       Message = io_lib:format("    ~s->>~s: ~p~n", [SendProcess, Process, MsgNum]),
                       RecvNote = io_lib:format("    Note over ~s: ~p~n", [Process, Clock]),
@@ -59,4 +59,4 @@ generate(Events) ->
   
   Body = lists:flatten(lists:reverse(MermaidLines)),
   B1 = string:replace(string:replace(Body, "#{", "", all), "}", "", all), 
-  io:format("~s~n", [Header ++ B1]).
+  io:format("~s~n~s~n", [Header, B1]).
