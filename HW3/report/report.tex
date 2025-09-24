@@ -20,108 +20,108 @@
 
 \section{Introduction}
 Lamport and vector clocks serve as fundamental tools that enable causal ordering in distributed systems. Though implementations might differ, their core principles are still represented in multiple areas such as distributed tracing, message queues, and distributed garbage collection.
-This assignments goal was the implementation of \textit{Loggy}, a logging procedure continually receiving random messages on a random delay from workers.
+This assignment's goal was the implementation of \textit{Loggy}, a logging procedure continually receiving random messages on a random delay from workers.
 
 The implementation spans a central logging module with a holdback queue to correctly print messages, workers sending and receiving messages between each other on a random delay with random jitters before reporting to the central logger, two clock modules, Lamport and vector based, and multiple analytics modules to generate insights.
+
+\section{Implementation}
+
+\subsection{Time}
+
+% DONE: explain time module in my own words
+The Lamport \textit{time} module contains functions to initialize, update, and review timestamps and clocks.
+The Lamport implementation handles timestamps as simple numbers and the clock as a map containing the worker names keys and individual timestamps as values.
+Updating the clock is handled by comparing the current value with the new value for a specified process and then changing the map if the new value is greater.
+A message is determined as safe to print when the given timestamp is less or equal to the minimum value from the clock map.
+
+The same methodology was applied to the vector (\textit{vect}) module, with the major difference being individual timestamps functioning like the clock from the Lamport implementation. This also makes the \texttt{safe/2} function equivalent to the \texttt{leq/2} function, as identifying whether a message with vector timestamp is safe to log is checking if the timestamp is causally before or concurrent with the current clock state.
+
+To use both modules without changes to the workers or \textit{Loggy} requiring recompilation, the \texttt{apply/3} function was utilized.
+
+\subsection{Holdback Queue}
+
+The holdback queue in the \textit{Loggy} module was implemented as a simple list, starting out empty initially.
+Each time a message is received, it is appended to the holdback queue, which is then sorted using the \texttt{time:leq/2} function.
+The sorted list is then split with \texttt{lists:partition/2} calling \texttt{time:safe/2} using the clock held by the loop and timestamp from each message in the queue.
+The resulting entries in the \texttt{Safe} list are then logged and the \texttt{Unsafe} list is passed to the next recursive function call of \texttt{loggy:loop/3}.
+
+% from assignment: How do we know if messages are safe to print?
+% What is it that the final log tells us? Did events happen in the order presented by the log? 
 
 \section{Main problems and solutions}
 
 \subsection{Validating Order}
 
 % TODO: total order here?
-Confirming the order of messages printed by \textit{Loggy} presented a challenge initially, as issues could be caused the clock and holdback queue implementation. Additionally, insight into the clock state and actual message times of each individual process was limited. 
+Confirming the order of messages printed by \textit{Loggy} presented a challenge initially, as issues could be caused by the clock and holdback queue implementation. Additionally, insight into the clock state and actual message times of each individual process was limited. 
 As the randomness of the workers is seeded, a jitter value set to \texttt{0} results in the holdback queue being skipped completely and messages being printed instantly when received. This output was then cross-checked with a regular test run.
 To further confirm total order, even with jitters greater than zero and especially for the vector clock, a \textit{mermaid} state chart graphing module was created as an observability tool. 
-% TODO: Did you detect entries out of order in the first implementation, and if so, how did you detect them? 
-
-\subsection{Holdback Queue Implementation}
-
-% TEXT: explain time module in my own words
-
-% TEXT: about holdback queue & that it utilizes leq/3 to sort the list after new entries are appended, then the safe function is used to split the list into safe and unsafe messages. In the recursion, the unsafe messages are passed to the next function call
-
-% from assignment: How do we know if messages are safe to print?
-% from assignment: You are also to write a report that describes your time module
-
-% What is it that the final log tells us? Did events happen in the order presented by the log? 
 
 \subsection{Log Parsing}
-
-Once the vector clock module was implemented mentally parsing the \textit{Loggy} output.
-To ease the load control sequences were utilized to format the logged messages in a more coherent and readable way.
+% difficulty reading the log until the log output was made clean using the built in padding
+Once the vector clock module was implemented mentally parsing the \textit{Loggy} output posed a greater challenge.
+To ease the load, control sequences were utilized to format the logged messages in a more coherent and readable way.
 
 \begin{verbatim}
-io:format("log: s:~-3w ~-6s ~-8w (~3w) c:~w~n", 
-          [Size, From, Act, Msg, Time]).
-% log: s:0   john   sending  (  6) c:john => 1
-% log: s:0   paul   received ( 26) c:john => 1,paul => 1
+io:format("log: s:~-2w ~-6s ~-8w (~3w) c:~w~n", [:]).
+log: s:0  george sending ( 99) c:john => 5,paul => 8,ringo => 6
 \end{verbatim}
-
-% difficulty reading the log until the log output was made clean using the built in padding
-
 
 \section{Evaluation}
 
 % Do some tests and identify situations where log entries are printed in the wrong order. 
-% How do you identify messages that are in the wrong order?
+% DONE: How do you identify messages that are in the wrong order?
 % What is always true, and what is sometimes true? How do you play it safe?
 
-\subsection{Visualization}
+\subsection{Truths}
 
-To aid evaluation, a module \textit{mermaid} was implemented to create visual representations of the messages flowing between the vector clocks.
+With this implementation, one can state that causal ordering is always preserved and therefore always true due to the individual timestamps shared by the workers and the implementation of the holdback queue.
+The \texttt{safe/2} function guarantees correctness, as it ensures a message is only printed when no earlier timestamp could arrive. 
+To aid evaluating this, a module \textit{mermaid} was implemented to create visual representations of the messages flowing between the workers including the data and clock states. Examples of these visualizations and corresponding \textit{Loggy} outputs can be found in the Appendix.
 
-See appendix. (TODO, proper sendoff to the appendix, google how)
+It is sometimes true that the total ordering matches the real-time ordering, as due to the delays and artificial jitters in communication with \textit{Loggy}, the order of logged events might not completely match the real order of events. This occurs in situations where events are concurrent, like two independent workers sending a message.
 
 \subsection{Queue Size Comparison}
-
-%Did events happen in the order presented by the log?
-%How large will the holdback queue be, make some tests and try to find the maximum number of entries.
-
 
 \begin{figure}[H]
   \begin{center}
     \begin{subfigure}[b]{0.494\textwidth}
       \centering
       \includegraphics[width=\textwidth]{test/jitter.pdf}
-      \caption{Comparison of Jitter using a 1500ms Sleep}
+      \caption{Jitter with 1500ms \texttt{Sleep}}
       \label{fig:results1}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.494\textwidth}
       \centering
       \includegraphics[width=\textwidth]{test/sleep.pdf}
-      \caption{Comparison of Sleep using a 250ms Jitter}
+      \caption{Sleep with 250ms \texttt{Jitter}}
       \label{fig:results2}
     \end{subfigure}
   \end{center}
-  \caption{Queue size comparison between the clock implementations on different delays and jitters}
+  \caption{Queue size comparison on different delays and jitters}
   \label{fig:comparison}
 \end{figure}
 
-Due to the inherit randomness of the \textit{Loggy} implementation these results can't be taken as absolutes for corelating sleep or jitter to the maximum queue size.
+Due to the inherent randomness of the \textit{Loggy} implementation these results can't be taken as absolutes for correlating sleep or jitter to the maximum queue size.
 Still, the difference between the maximum size of the Lamport queue when compared to the vector queue demonstrates the logging throughput being greater, at the cost of larger messages.
 
+Also notable is the bypass of the holdback queue when the \texttt{Jitter} is set to zero as can be seen in Figure \ref{fig:results1}.
 % actually validate that the queue size isn't too big, logging seems weird right now, 
 % CONFIRMED: i'm just stupid the queue size is always printed by all the same logging outs
 
-
 \section{Conclusions}
 
-% Is this not exactly what we have done in the Lamport clock solution?
-
-An interesting part of this \textit{Loggy} implementation was the similarity between the full Lamport clock and the individual times held by the vector clock workers.
-Concluding, the vector implementation is similar to the Lamport implementation at its core due to the shared methodology of incrementing a simple value to represent [the state in time ]
-
-
-% something about vector clocks
-
+In conclusion, the holdback queue is crucial to maintain causal order to guarantee sends being logged before receives, although it cannot guarantee correctness for independent concurrent events. 
+Improvements to the current implementation include replacing \texttt{apply/3} with a shared time module to improve performance, as it will always be slower than direct function calls, and implementation of more sophisticated observability as the current \textit{mermaid} module can't correctly represent concurrent send messages.
 
 \newpage
-\section{Appendix}
 
-Both of these tests were completed using \texttt{test:run(<module>, 1500, 500).}
+\appendix
 
-\subsection{Lamport Clock}
+\section{Lamport Clock}
+These tests were completed using \texttt{test:run(<module>, 1500, 500).}
+
 \begin{verbatim}
 119> test:run(time, 1500, 500).
 loggy: starting with module time
@@ -158,13 +158,13 @@ log: s:3   ringo  received (  1) c:15
 
 \begin{figure}[H]
   \begin{center}
-    \includegraphics[height=\textheight]{graphics/mermaid_lamport.pdf}
+    \includegraphics[height=0.985\textheight]{graphics/mermaid_lamport.pdf}
     \caption{Sequence visualization of the Lamport timestamp algorithm}
     \label{fig:seq1}
   \end{center}
 \end{figure}
 
-\subsection{Vector Clock}
+\section{Vector Clock}
 \begin{verbatim}
 120> test:run(vect, 1500, 500).
 loggy: starting with module vect
@@ -202,7 +202,7 @@ log: s:0   paul   received ( 99) c:john => 5,paul => 9,ringo => 6,george => 8
 
 \begin{figure}[H]
   \begin{center}
-    \includegraphics[height=\textheight]{graphics/mermaid_vector.pdf}
+    \includegraphics[height=0.985\textheight]{graphics/mermaid_vector.pdf}
     \caption{Sequence visualization of the vector clock implementation}
     \label{fig:seq2}
   \end{center}
