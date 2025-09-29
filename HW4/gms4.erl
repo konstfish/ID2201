@@ -2,7 +2,7 @@
 
 -export([start/1, start/2]).
 
--define(arghh, 50000000).
+-define(arghh, 100).
 -define(ignore, 10).
 
 -define(timeout, 200).
@@ -11,6 +11,7 @@
 
 % test:more(5, gms4, 3000).
 % 1500
+% test:run(8, 2000).
 
 % leader
 start(Id) ->
