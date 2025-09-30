@@ -6,6 +6,20 @@
 %
 % W1 = test:first(1, gms1, 1000)
 
+infinite() ->
+  first(1, gms3, 1000),
+
+  infinite_spawn(2).
+
+infinite_spawn(N) ->
+  worker:start(N, gms3, random:uniform(256), leader, 1000),
+
+  timer:sleep(random:uniform(2000)+1500),
+
+  infinite_spawn(N+1).
+
+
+% gms4 testing
 run(N, Delay) ->
   more(N, gms4, Delay).
 

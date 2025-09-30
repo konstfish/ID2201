@@ -110,6 +110,11 @@ worker(Id, Cast, Color, Gui, Sleep) ->
 	stop ->
 	    ok;
 
+  %% new error:
+  {error, _} ->
+      io:format("worker stopping"),
+      ok;
+
 	%% Someone from above wants us to multicast a message.
 	{send, Msg} ->
 	    Cast !  {mcast, Msg},	    

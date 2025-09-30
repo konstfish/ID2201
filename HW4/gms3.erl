@@ -3,12 +3,13 @@
 -export([start/1, start/2]).
 
 -define(timeout, 200).
--define(arghh, 1000000).
+-define(arghh, 185).
 
 % leader
 start(Id) ->
   Rnd = random:uniform(1000),
   Self = self(),
+  register(leader, Self),
   io:format("Starting Leader ~w at ~w~n", [Id, Self]),
   {ok, spawn_link(fun() -> init(Id, Rnd, Self) end)}.
 
@@ -49,6 +50,7 @@ leader(Id, Master, N, Slaves, Group) ->
       Master ! {view, Group2},
       leader(Id, Master, N+1, Slaves2, Group2);
     stop ->
+      Master ! stop,
       ok
   end.
 
@@ -93,6 +95,7 @@ election(Id, Master, N, Last, Slaves, [_|Group]) ->
   case Slaves of
     [Self|Rest] ->
       io:format("Slave ~w Became new Leader ~w~n", [Id, Self]),
+      register(leader, Self),
       bcast(Id, {view, N, Slaves, Group}, Rest),
       Master ! {view, Group},
       bcast(Id, Last, Rest),
