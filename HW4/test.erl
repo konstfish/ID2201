@@ -18,6 +18,9 @@ infinite_spawn(N) ->
 
   infinite_spawn(N+1).
 
+ack() ->
+  more(5, gms4, 3000).
+
 
 % gms4 testing
 run(N, Delay) ->
