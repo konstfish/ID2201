@@ -1,0 +1,127 @@
+--> 1 Node(s), 1 Machine(s), 4000 Entries
+
+--> Probing(1)
+probe: passed through ring [372338233] (1) in 4μs
+372338233: pre: {372338233,<0.151.0>} suc: {372338233,<0.151.0>}, storage: 0
+
+--> (1)
+{op: add, count: 1, id: 4000, time: 27ms}
+{op: look, count: 1, id: 4000, time: 3ms, failed: 0, timeout: 0}
+
+--> Probing(1)
+probe: passed through ring [372338233] (1) in 4μs
+372338233: pre: {372338233,<0.151.0>} suc: {372338233,<0.151.0>}, storage: 4000
+
+
+--> 1 Node(s), 4 Machine(s), 1000 Entries
+
+
+--> Probing(1)
+probe: passed through ring [873181063] (1) in 3μs
+873181063: pre: {873181063,<0.154.0>} suc: {873181063,<0.154.0>}, storage: 0
+
+--> (1)
+{op: add, count: 2, id: 1000, time: 5ms}
+{op: add, count: 3, id: 1000, time: 15ms}
+{op: add, count: 4, id: 1000, time: 17ms}
+{op: look, count: 2, id: 1000, time: 9ms, failed: 0, timeout: 0}
+{op: add, count: 1, id: 1000, time: 17ms}
+{op: look, count: 3, id: 1000, time: 2ms, failed: 0, timeout: 0}
+{op: look, count: 4, id: 1000, time: 2ms, failed: 0, timeout: 0}
+{op: look, count: 1, id: 1000, time: 1ms, failed: 0, timeout: 0}
+
+--> Probing(1)
+probe: passed through ring [873181063] (1) in 2μs
+873181063: pre: {873181063,<0.154.0>} suc: {873181063,<0.154.0>}, storage: 4000
+
+
+--> 2 Node(s), 4 Machine(s), 1000 Entries
+
+
+--> Probing(2)
+643635659: pre: {210830761,<0.161.0>} suc: {210830761,<0.161.0>}, storage: 0
+210830761: pre: {643635659,<0.160.0>} suc: {643635659,<0.160.0>}, storage: 0
+probe: passed through ring [643635659,210830761] (2) in 7637μs
+
+--> (2)
+{op: add, count: 4, id: 1000, time: 10ms}
+{op: add, count: 2, id: 1000, time: 10ms}
+{op: add, count: 1, id: 1000, time: 15ms}
+{op: add, count: 3, id: 1000, time: 16ms}
+{op: look, count: 2, id: 1000, time: 11ms, failed: 0, timeout: 0}
+{op: look, count: 4, id: 1000, time: 13ms, failed: 0, timeout: 0}
+{op: look, count: 1, id: 1000, time: 12ms, failed: 0, timeout: 0}
+{op: look, count: 3, id: 1000, time: 10ms, failed: 0, timeout: 0}
+
+--> Probing(2)
+643635659: pre: {210830761,<0.161.0>} suc: {210830761,<0.161.0>}, storage: 1752
+210830761: pre: {643635659,<0.160.0>} suc: {643635659,<0.160.0>}, storage: 2248
+probe: passed through ring [643635659,210830761] (2) in 472μs
+
+
+--> 8 Node(s), 20 Machine(s), 1000 Entries
+
+
+--> Probing(8)
+885953084: pre: {771954917,<0.171.0>} suc: {886237437,<0.181.0>}, storage: 0
+886237437: pre: {885953084,<0.168.0>} suc: {259120663,<0.177.0>}, storage: 0
+259120663: pre: {886237437,<0.181.0>} suc: {443237036,<0.175.0>}, storage: 0
+443237036: pre: {259120663,<0.177.0>} suc: {477326967,<0.169.0>}, storage: 0
+477326967: pre: {443237036,<0.175.0>} suc: {584293962,<0.179.0>}, storage: 0
+584293962: pre: {477326967,<0.169.0>} suc: {738215803,<0.173.0>}, storage: 0
+738215803: pre: {584293962,<0.179.0>} suc: {771954917,<0.171.0>}, storage: 0
+771954917: pre: {738215803,<0.173.0>} suc: {885953084,<0.168.0>}, storage: 0
+probe: passed through ring [885953084,886237437,259120663,443237036,477326967,584293962,738215803,771954917] (8) in 1563μs
+
+--> (8)
+{op: add, count: 4, id: 1000, time: 52ms}
+{op: add, count: 12, id: 1000, time: 54ms}
+{op: add, count: 10, id: 1000, time: 54ms}
+{op: add, count: 9, id: 1000, time: 54ms}
+{op: add, count: 7, id: 1000, time: 54ms}
+{op: add, count: 17, id: 1000, time: 55ms}
+{op: add, count: 20, id: 1000, time: 54ms}
+{op: add, count: 2, id: 1000, time: 54ms}
+{op: add, count: 14, id: 1000, time: 55ms}
+{op: add, count: 6, id: 1000, time: 55ms}
+{op: add, count: 11, id: 1000, time: 56ms}
+{op: add, count: 5, id: 1000, time: 55ms}
+{op: add, count: 16, id: 1000, time: 56ms}
+{op: add, count: 15, id: 1000, time: 56ms}
+{op: add, count: 19, id: 1000, time: 56ms}
+{op: add, count: 1, id: 1000, time: 57ms}
+{op: add, count: 13, id: 1000, time: 57ms}
+{op: add, count: 3, id: 1000, time: 56ms}
+{op: add, count: 8, id: 1000, time: 58ms}
+{op: add, count: 18, id: 1000, time: 58ms}
+{op: look, count: 4, id: 1000, time: 31ms, failed: 0, timeout: 0}
+{op: look, count: 12, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 10, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 7, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 17, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 9, id: 1000, time: 31ms, failed: 0, timeout: 0}
+{op: look, count: 2, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 20, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 11, id: 1000, time: 29ms, failed: 0, timeout: 0}
+{op: look, count: 14, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 5, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 16, id: 1000, time: 29ms, failed: 0, timeout: 0}
+{op: look, count: 6, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 19, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 15, id: 1000, time: 30ms, failed: 0, timeout: 0}
+{op: look, count: 8, id: 1000, time: 28ms, failed: 0, timeout: 0}
+{op: look, count: 13, id: 1000, time: 29ms, failed: 0, timeout: 0}
+{op: look, count: 1, id: 1000, time: 29ms, failed: 0, timeout: 0}
+{op: look, count: 3, id: 1000, time: 29ms, failed: 0, timeout: 0}
+{op: look, count: 18, id: 1000, time: 28ms, failed: 0, timeout: 0}
+
+--> Probing(8)
+885953084: pre: {771954917,<0.171.0>} suc: {886237437,<0.181.0>}, storage: 2231
+886237437: pre: {885953084,<0.168.0>} suc: {259120663,<0.177.0>}, storage: 11
+259120663: pre: {886237437,<0.181.0>} suc: {443237036,<0.175.0>}, storage: 7529
+443237036: pre: {259120663,<0.177.0>} suc: {477326967,<0.169.0>}, storage: 3697
+477326967: pre: {443237036,<0.175.0>} suc: {584293962,<0.179.0>}, storage: 716
+584293962: pre: {477326967,<0.169.0>} suc: {738215803,<0.173.0>}, storage: 2106
+738215803: pre: {584293962,<0.179.0>} suc: {771954917,<0.171.0>}, storage: 3059
+771954917: pre: {738215803,<0.173.0>} suc: {885953084,<0.168.0>}, storage: 651
+probe: passed through ring [885953084,886237437,259120663,443237036,477326967,584293962,738215803,771954917] (8) in 311μs

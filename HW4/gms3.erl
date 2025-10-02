@@ -3,7 +3,7 @@
 -export([start/1, start/2]).
 
 -define(timeout, 200).
--define(arghh, 185).
+-define(arghh, 185000000000000).
 
 % leader
 start(Id) ->

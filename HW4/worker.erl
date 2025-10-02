@@ -133,6 +133,7 @@ worker(Id, Cast, Color, Gui, Sleep) ->
 
 
 frozen(Id, Cast, Color, Gui, Sleep) ->
+    io:format("~w got freeze", [Id]),
     receive 
 	go ->
 	    worker(Id, Cast, Color, Gui, Sleep);
