@@ -4,6 +4,33 @@
 
 -define(Timeout, 1000).
 
+% Chapter 3
+makeringbreakring() ->
+  N1 = test:start(node3),
+  register(n1, N1),
+
+  N2 = test:start(node3, N1),
+  N3 = test:start(node3, N1),
+  N4 = test:start(node3, N1),
+  N5 = test:start(node3, N1),
+  N6 = test:start(node3, N1),
+  N7 = test:start(node3, N1),
+  N8 = test:start(node3, N1),
+
+  timer:sleep(8000),
+
+  n1 ! probe,
+
+  timer:sleep(500),
+
+  N4 ! stop,
+
+  timer:sleep(3000),
+
+  n1 ! probe.
+
+
+
 % custom stuff
 threering() ->
   Node1 = test:start(node2),
