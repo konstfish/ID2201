@@ -4,6 +4,42 @@
 
 -define(Timeout, 1000).
 
+% Chapter 4
+storagemakeringbreakring() ->
+  N1 = test:start(node4),
+  register(n1, N1),
+
+  N2 = test:start(node4, N1),
+  N3 = test:start(node4, N1),
+  N4 = test:start(node4, N1),
+  N5 = test:start(node4, N1),
+  N6 = test:start(node4, N1),
+  N7 = test:start(node4, N1),
+  N8 = test:start(node4, N1),
+
+  timer:sleep(8000),
+
+  io:format("--> Adding initial keyset~n~n"),
+
+  Keys = keys(1000),
+  add(1, Keys, n1),
+
+  timer:sleep(500),
+
+  n1 ! probe,
+
+  timer:sleep(500),
+
+  io:format("--> Stopping a node~n~n"),
+  N4 ! stop,
+
+  timer:sleep(3000),
+
+  n1 ! probe,
+
+  check(1, Keys, n1).
+
+
 % Chapter 3
 makeringbreakring() ->
   N1 = test:start(node3),
