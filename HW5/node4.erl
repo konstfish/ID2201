@@ -138,6 +138,9 @@ request(Peer, Predecessor, Successor) ->
   case Predecessor of
     nil ->
       Peer ! {status, nil, Successor};
+    {_, nil, nil} ->
+      % Predecessor died
+      Peer ! {status, nil, Successor};
     {Pkey, _, Ppid} ->
       Peer ! {status, {Pkey, Ppid}, Successor}
   end.
@@ -145,17 +148,33 @@ request(Peer, Predecessor, Successor) ->
 notify({Nkey, Npid}, Id, Predecessor, {_, _, Spid}, Store, Replica) ->
   case Predecessor of
     nil ->
-      {Keep, RepKeep} = handover(Id, Store, Replica, Nkey, Npid),
+      % No predecessor, do normal handover
+      {Keep, _} = handover(Id, Store, storage:create(), Nkey, Npid),
       Nref = monitor(Npid),
-      {{Nkey, Nref, Npid}, Keep, RepKeep};
+      {{Nkey, Nref, Npid}, Keep, storage:create()};
+    {Pkey, nil, nil} ->
+      % Predecessor died, merge replica first
+      Merged = storage:merge(Store, Replica),
+      % Check if new node is between dead predecessor and us
+      case key:between(Nkey, Pkey, Id) of
+        true ->
+          % New node genuinely between dead pred and us, do handover
+          {Keep, _} = handover(Id, Merged, storage:create(), Nkey, Npid),
+          Nref = monitor(Npid),
+          {{Nkey, Nref, Npid}, Keep, storage:create()};
+        false ->
+          % This is grandpredecessor, don't handover
+          Nref = monitor(Npid),
+          {{Nkey, Nref, Npid}, Merged, storage:create()}
+      end;
     {Pkey, Pref, _} ->
       case key:between(Nkey, Pkey, Id) of
         true ->
           % new one is actually between
-          {Keep, RepKeep} = handover(Id, Store, Replica, Nkey, Npid),
+          {Keep, _} = handover(Id, Store, storage:create(), Nkey, Npid),
           drop(Pref),
           Nref = monitor(Npid),
-          {{Nkey, Nref, Npid}, Keep, RepKeep};
+          {{Nkey, Nref, Npid}, Keep, storage:create()};
         false ->
           % keep old one
           {Predecessor, Store, Replica}
@@ -208,11 +227,12 @@ lookup(Key, Qref, Client, Id, {Pkey, _, _}, {_, _, Spid}, Store) ->
   end.
 
 handover(Id, Store, Replica, Nkey, Npid) ->
-  {Keep, Rest} = storage:split(Id, Nkey, Store),
-  {RepKeep, RepRest} = storage:split(Id, Nkey, Replica),
-
-  Npid ! {handover, Rest, RepRest},
-  {Keep, RepKeep}.
+  {Keep, Rest} = storage:split(Nkey, Id, Store),
+  % Keys between Id and Nkey (wrapping) are what we keep
+  % Rest goes to new predecessor, along with our Replica
+  % New predecessor becomes responsible for our old predecessor's backup
+  Npid ! {handover, Rest, Replica},
+  {Keep, storage:create()}.
 
 % node crashes
 
@@ -224,10 +244,9 @@ drop(nil) ->
 drop(Ref) ->
   erlang:demonitor(Ref, [flush]).
 
-down(Ref, {_, Ref, _}, Successor, Next, Store, Replica) ->
-  % predecessor died, merge its replica into our store
-  Merged = storage:merge(Store, Replica),
-  {nil, Successor, Next, Merged, storage:create()};
+down(Ref, {Pkey, Ref, _}, Successor, Next, Store, Replica) ->
+  % predecessor died, keep replica and mark predecessor as dead
+  {{Pkey, nil, nil}, Successor, Next, Store, Replica};
 down(Ref, Predecessor, {_, Ref, _}, {Nkey, Nref, Npid}, Store, Replica) ->
   % successor died, adopt next as successor
   Npid ! {request, self()},

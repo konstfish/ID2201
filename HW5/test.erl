@@ -15,7 +15,6 @@ storagemakeringbreakring() ->
   N5 = test:start(node4, N1),
   N6 = test:start(node4, N1),
   N7 = test:start(node4, N1),
-  N8 = test:start(node4, N1),
 
   timer:sleep(8000),
 
@@ -30,14 +29,43 @@ storagemakeringbreakring() ->
 
   timer:sleep(500),
 
+  io:format("--> Adding a new node"),
+
+  N8 = test:start(node4, N1),
+
+  timer:sleep(6000),
+
+  n1 ! probe,
+  timer:sleep(300),
+  check(1, Keys, n1),
+
+
   io:format("--> Stopping a node~n~n"),
   N4 ! stop,
 
-  timer:sleep(3000),
+  timer:sleep(6000),
 
   n1 ! probe,
 
-  check(1, Keys, n1).
+  check(1, Keys, n1),
+
+  io:format("--> Adding a new node & second keyset~n~n"),
+
+  N9 = test:start(node4, N1),
+
+  timer:sleep(6000),
+
+  Keys2 = keys(1000),
+  add(2, Keys2, n1),
+
+  timer:sleep(1000),
+
+  n1 ! probe,
+
+  timer:sleep(1000),
+
+  check(1, Keys, n1),
+  check(2, Keys2, n1).
 
 
 % Chapter 3
@@ -48,12 +76,33 @@ makeringbreakring() ->
   N2 = test:start(node3, N1),
   N3 = test:start(node3, N1),
   N4 = test:start(node3, N1),
+
+  timer:sleep(8000),
+
+  io:format("--> add keyset~n~n"),
+
+  Keys = machine_add_lookup(n1, 1, 1000),
+
+  timer:sleep(500),
+
+  io:format("--> check~n~n"),
+
+  n1 ! probe,
+
+  timer:sleep(500),
+
+  io:format("--> add add more nodes~n~n"),
+
   N5 = test:start(node3, N1),
   N6 = test:start(node3, N1),
   N7 = test:start(node3, N1),
   N8 = test:start(node3, N1),
 
   timer:sleep(8000),
+
+  io:format("--> check keyset again~n~n"),
+
+  check(1, Keys, n1),
 
   n1 ! probe,
 
@@ -152,12 +201,14 @@ machine_add_lookup(Node, N, NElem) ->
 %% Starting up a set of nodes is made easier using this function.
 
 start(Module) ->
-    Id = key:generate(), 
+    Id = key:generate(),
+    io:format("! starting node ~w~n", [Id]),
     apply(Module, start, [Id]).
 
 
 start(Module, P) ->
-    Id = key:generate(), 
+    Id = key:generate(),
+    io:format("! starting node ~w~n", [Id]),
     apply(Module, start, [Id,P]).    
 
 start(_, 0, _) ->
