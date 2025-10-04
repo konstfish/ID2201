@@ -43,7 +43,7 @@ storagemakeringbreakring() ->
   io:format("--> Stopping a node~n~n"),
   N4 ! stop,
 
-  timer:sleep(6000),
+  timer:sleep(8000),
 
   n1 ! probe,
 

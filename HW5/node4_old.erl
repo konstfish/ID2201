@@ -2,7 +2,7 @@
 
 -compile(export_all).
 
--define(Stabilize, 750).
+-define(Stabilize, 500).
 -define(Timeout, 10000).
 
 start(Id) ->
@@ -40,7 +40,7 @@ node(Id, Predecessor, Successor, Next, Store, Replica) ->
       node(Id, Predecessor, Successor, Next, Store, Replica);
 
     {notify, New} ->
-      {Pred, Sto, Rep} = notify(New, Id, Predecessor, Store, Replica),
+      {Pred, Sto, Rep} = notify(New, Id, Predecessor, Successor, Store, Replica),
       node(Id, Pred, Successor, Next, Sto, Rep);
 
     {request, Peer} ->
@@ -49,7 +49,6 @@ node(Id, Predecessor, Successor, Next, Store, Replica) ->
 
     {status, Pred, Nx} ->
       {Succ, Nxt} = stabilize(Pred, Nx, Id, Successor),
-      fullreplica(Succ, Store),
       node(Id, Predecessor, Succ, Nxt, Store, Replica);
 
     stabilize ->
@@ -84,25 +83,12 @@ node(Id, Predecessor, Successor, Next, Store, Replica) ->
       Client ! {Qref, ok},
       node(Id, Predecessor, Successor, Next, Store, Added);
 
-    {fullreplica, Rep} ->
-      case storage:size(Rep) /= storage:size(Replica) of
-        true ->
-          io:format("~w: replica inconsistency~n", [Id]),
-          node(Id, Predecessor, Successor, Next, Store, Rep);
-        false ->
-          node(Id, Predecessor, Successor, Next, Store, Rep)
-      end;
-      
     % file storage handover
     {handover, Elements, Rep} ->
       Merged = storage:merge(Store, Elements),
-      io:format("~w got handover: store: ~w, rep: ~w~n", [Id, storage:size(Merged), storage:size(Rep)]),
-      node(Id, Predecessor, Successor, Next, Merged, Rep);
+      RepMerged = storage:merge(Replica, Rep),
+      node(Id, Predecessor, Successor, Next, Merged, RepMerged);
 
-    %{handoverrev, Elements} ->
-    %  Merged = storage:merge(Replica, Elements),
-    %  node(Id, Predecessor, Successor, Next, Store, Merged);
-      
     {'DOWN', Ref, process, _, _} ->
       {Pred, Succ, Nxt, Sto, Rep} = down(Ref, Predecessor, Successor, Next, Store, Replica),
       node(Id, Pred, Succ, Nxt, Sto, Rep);
@@ -152,24 +138,43 @@ request(Peer, Predecessor, Successor) ->
   case Predecessor of
     nil ->
       Peer ! {status, nil, Successor};
+    {_, nil, nil} ->
+      % Predecessor died
+      Peer ! {status, nil, Successor};
     {Pkey, _, Ppid} ->
       Peer ! {status, {Pkey, Ppid}, Successor}
   end.
 
-notify({Nkey, Npid}, Id, Predecessor, Store, Replica) ->
+notify({Nkey, Npid}, Id, Predecessor, {_, _, Spid}, Store, Replica) ->
   case Predecessor of
     nil ->
-      {Keep, Rep} = handover(Id, Store, Replica, Nkey, Npid),
+      % No predecessor, do normal handover
+      {Keep, _} = handover(Id, Store, storage:create(), Nkey, Npid),
       Nref = monitor(Npid),
-      {{Nkey, Nref, Npid}, Keep, Rep};
+      {{Nkey, Nref, Npid}, Keep, storage:create()};
+    {Pkey, nil, nil} ->
+      % Predecessor died, merge replica first
+      Merged = storage:merge(Store, Replica),
+      % Check if new node is between dead predecessor and us
+      case key:between(Nkey, Pkey, Id) of
+        true ->
+          % New node genuinely between dead pred and us, do handover
+          {Keep, _} = handover(Id, Merged, storage:create(), Nkey, Npid),
+          Nref = monitor(Npid),
+          {{Nkey, Nref, Npid}, Keep, storage:create()};
+        false ->
+          % This is grandpredecessor, don't handover
+          Nref = monitor(Npid),
+          {{Nkey, Nref, Npid}, Merged, storage:create()}
+      end;
     {Pkey, Pref, _} ->
       case key:between(Nkey, Pkey, Id) of
         true ->
           % new one is actually between
-          {Keep, Rep} = handover(Id, Store, Replica, Nkey, Npid),
+          {Keep, _} = handover(Id, Store, storage:create(), Nkey, Npid),
           drop(Pref),
           Nref = monitor(Npid),
-          {{Nkey, Nref, Npid}, Keep, Rep};
+          {{Nkey, Nref, Npid}, Keep, storage:create()};
         false ->
           % keep old one
           {Predecessor, Store, Replica}
@@ -199,6 +204,7 @@ add(Key, Value, Qref, Client, Id, {Pkey, _, _}, {_, _, Spid}, Store) ->
       % my key
       Spid ! {replicate, Key, Value, Qref, Client},
       storage:add(Key, Value, Store);
+      % notify after we've added both
     false ->
       Spid ! {add, Key, Value, Qref, Client},
       Store
@@ -220,12 +226,11 @@ lookup(Key, Qref, Client, Id, {Pkey, _, _}, {_, _, Spid}, Store) ->
 
 handover(Id, Store, Replica, Nkey, Npid) ->
   {Keep, Rest} = storage:split(Nkey, Id, Store),
-  io:format("~w: handing over to ~w -> ~w keys, keeping ~w keys~n", [Id, Nkey, storage:size(Rest), storage:size(Keep)]),
-  Npid ! {handover, Rest, Keep},
-  {Keep, Rest}.
-
-fullreplica({_, _, Spid}, Store) ->
-  Spid ! {fullreplica, Store}.
+  % Keys between Id and Nkey (wrapping) are what we keep
+  % Rest goes to new predecessor, along with our Replica
+  % New predecessor becomes responsible for our old predecessor's backup
+  Npid ! {handover, Rest, Replica},
+  {Keep, storage:create()}.
 
 % node crashes
 
@@ -237,13 +242,11 @@ drop(nil) ->
 drop(Ref) ->
   erlang:demonitor(Ref, [flush]).
 
-down(Ref, {_, Ref, _}, Successor, Next, Store, Replica) ->
-  % predecessor died, set to nil & merge my storage
-  Sto = storage:merge(Store, Replica),
-  {nil, Successor, Next, Sto, storage:create()};
+down(Ref, {Pkey, Ref, _}, Successor, Next, Store, Replica) ->
+  % predecessor died, keep replica and mark predecessor as dead
+  {{Pkey, nil, nil}, Successor, Next, Store, Replica};
 down(Ref, Predecessor, {_, Ref, _}, {Nkey, Nref, Npid}, Store, Replica) ->
   % successor died, adopt next as successor
-  % TODO: update successor store
   Npid ! {request, self()},
   {Predecessor, {Nkey, Nref, Npid}, nil, Store, Replica}.
 

@@ -60,6 +60,7 @@ This approach is however not ideal if two neighboring nodes fail concurrently.
 
 As data is only stored in memory, node failures result in data loss. To mitigate this, nodes keep a replica of their predecessors data which is built concurrently with the main storage.
 The client is only notified of a successful add operation once both the main storage and the replica have been updated.
+TODO: update this section
 The handover process now also includes a split version of the replica data sent to new nodes joining the ring.
 When a predecessor dies, the node merges the replica storage with its main storage.
 
@@ -67,7 +68,8 @@ When a predecessor dies, the node merges the replica storage with its main stora
 
 \subsection{Functions and Parameters}
 
-TODO: amount of functions and parameters often lead to confusion and failing tests due to missmatches and bugs
+The amount of functions and parameters the mature implementations require posed difficulties with retaining a holistic view and often lead to failing tests due to return value mismatches and bugs. 
+This was resolved through meticulous analysis and stepping through the node implementations function for function.
 
 \subsection{Replication}
 
@@ -76,6 +78,11 @@ TODO: difficulty in implementing replication correctly, especially during handov
 \section{Evaluation}
 
 \subsection{Performance}
+
+% xxx something on scale affecting the performance in both directions.
+Figure \ref{fig:heatmaps} shows the performance of the DHT with different ring sizes and amounts of clients, each of the client machines performing 1000 operations over the first node in the ring.
+The heatmaps illustrate the routing tables $O(N)$ lookup times, as performance degrades more with the number of nodes in the ring than with the number of clients.
+The single entrypoint into the ring is also bottleneck which could be resolved by having clients randomly hit nodes to profit from the pseudo-random key distribution.
 
 \begin{figure}[htbp]
   \begin{subfigure}[b]{0.48\textwidth}
@@ -94,7 +101,7 @@ TODO: difficulty in implementing replication correctly, especially during handov
         } {
           % column labels
           \ifnum\n<10
-            \node[minimum size=10mm] at (1.25*\n, 0.1) {M\n};
+            \node[minimum size=10mm] at (1.25*\n, 0.1) {\n};
           \fi
           % heatmap tiles
           \foreach \x [count=\m] in \y {
@@ -127,7 +134,7 @@ TODO: difficulty in implementing replication correctly, especially during handov
         }
       % row labels
       \foreach \a [count=\i] in {1, 2, 4, 8, 16} {
-        \node[minimum size=10mm] at (-0.1,-1.25*\i) {N\a};
+        \node[minimum size=10mm] at (-0.1,-1.25*\i) {\a};
       }
     \end{tikzpicture}%
     }
@@ -151,7 +158,7 @@ TODO: difficulty in implementing replication correctly, especially during handov
         } {
           % column labels
           \ifnum\n<10
-            \node[minimum size=10mm] at (1.25*\n, 0.1) {M\n};
+            \node[minimum size=10mm] at (1.25*\n, 0.1) {\n};
           \fi
           % heatmap tiles
           \foreach \x [count=\m] in \y {
@@ -184,18 +191,16 @@ TODO: difficulty in implementing replication correctly, especially during handov
         }
       % row labels
       \foreach \a [count=\i] in {1, 2, 4, 8, 16} {
-        \node[minimum size=10mm] at (-0.1,-1.25*\i) {N\a};
+        \node[minimum size=10mm] at (-0.1,-1.25*\i) {\a};
       }
     \end{tikzpicture}%
     }
     \caption{Lookup Operations}
     \label{fig:heatmap-b}
   \end{subfigure}
-  \caption{Performance comparison in milliseconds for 1000 operations per machine}
+  \caption{Performance comparison in milliseconds with varying numbers of nodes and clients}
   \label{fig:heatmaps}
 \end{figure}
-
-xxx something on scale affecting the performance in both directions. A major bottleneck in these tests also stems from the initial ring member being the single point of entry for all lookup and add operations.
 
 \subsection{Ring Maintenance}
 
