@@ -78,9 +78,9 @@ node(Id, Predecessor, Successor, Next, Store, Replica) ->
       lookup(Key, Qref, Client, Id, Predecessor, Successor, Store),
       node(Id, Predecessor, Successor, Next, Store, Replica);
 
-    {replicate, Key, Value} ->
-      % TODO: maybe pass Qref to here & then notify from here
+    {replicate, Key, Value, Qref, Client} ->
       Added = storage:add(Key, Value, Replica),
+      Client ! {Qref, ok},
       node(Id, Predecessor, Successor, Next, Store, Added);
 
     % file storage handover
@@ -196,15 +196,13 @@ remove_probe(T, Nodes) ->
 
 add(Key, Value, Qref, Client, _Id, nil, {_, _, Spid}, Store) ->
   % no predecessor, we handle all keys
-  Spid ! {replicate, Key, Value},
-  Client ! {Qref, ok},
+  Spid ! {replicate, Key, Value, Qref, Client},
   storage:add(Key, Value, Store);
 add(Key, Value, Qref, Client, Id, {Pkey, _, _}, {_, _, Spid}, Store) ->
   case key:between(Key, Pkey, Id) of
     true ->
       % my key
-      Spid ! {replicate, Key, Value},
-      Client ! {Qref, ok},
+      Spid ! {replicate, Key, Value, Qref, Client},
       storage:add(Key, Value, Store);
       % notify after we've added both
     false ->

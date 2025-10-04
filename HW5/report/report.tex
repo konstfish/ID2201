@@ -1,6 +1,7 @@
 % Very simple template for lab reports. Most common packages are already included.
 \documentclass[a4paper, 11pt]{article}
 \usepackage[utf8]{inputenc} % Change according your file encoding
+\usepackage{float}
 \usepackage{graphicx}
 \usepackage{url}
 \usepackage{xcolor}
@@ -8,6 +9,7 @@
 \usepackage{array}
 \usepackage{tikz}
 \usepackage{subcaption}
+\usepackage{enumitem}
 
 % Define the color gradient
 \definecolor{darkgreen}{RGB}{26, 188, 156}
@@ -18,8 +20,8 @@
 \definecolor{red}{RGB}{239, 68, 68}
 
 %opening
-\title{Report X: Homework Report Template}
-\author{Your name}
+\title{HW5 Report, Chordy: A Distributed Hash Table}
+\author{David Fischer}
 \date{\today{}}
 
 \begin{document}
@@ -27,13 +29,53 @@
 \maketitle
 
 \section{Introduction}
+This assignment's goal was the implementation of \textit{Chordy} a DHT based on a variation of \textit{Chord}, a distributed lookup protocol designed to efficiently identify the node in a peer-to-peer that stores a particular data item.
+\textit{Chord} addresses many problems distributed systems face such as load balancing, decentralization, scalability, availability, and flexible naming.
 
-\textit{Summary of the work you've done, what are the topics we cover
-  in this seminar, etc. Remember that you should deliver this report
-  at the start of the seminar.}
+\section{Implementation}
 
-What is the main topic related to distributed systems covered in this seminar?
-Why is it important?
+\subsection{Ring Structure}
+
+To ease validation and development, instead of the usually intended consistent hashing function, simple numerical IDs were used for both nodes and later on keys. This still provides the random distribution of keys to nodes, which should result in even storage sizes between nodes.
+% As before, let m be the number of bits in the key/node identifiers. Each node, n, maintains a routing table with (at most) m entries, called the finger table.
+As opposed to the \textit{finger table}, used in the original \textit{Chord} paper, which allows for $O(log N)$ lookup times, a simpler routing table was implemented. Each node only keeps track of its successor and predecessor in the ring. This results in $O(N)$ lookup times.
+The ring structure is periodically stabilized through a \texttt{stabilize/3} function, which gradually heals the ring when new nodes join by having each node ask its successor for their predecessor and adjusting its own records accordingly.
+As the structure will have to wrap around at some point, the \texttt{between/3} function was implemented in a way to handle \texttt{From} being larger than \texttt{To} by checking if the \texttt{Id} is either larger than \texttt{From} or smaller than \texttt{To}.
+
+\subsection{Storage}
+
+Storage was implemented by having each node keep a map of key-value pairs which can be added and looked up by sending corresponding messages to the nodes.
+These messages are routed through the ring structure until they reach the node responsible for the given key,
+at which point the operation is executed and the client is notified through a message including the reference it provided using \texttt{make\_ref/0}.
+Additionally, to support new nodes joining the ring, a handover message containing the keys split from the predecessor, based on the two nodes keys, is sent to the new node.
+
+\subsection{Failure Detection}
+
+To detect failed nodes, Erlangs failure detection mechanism was used to have each node monitor their predecessor and successor.
+Nodes keep a record of their successors successor, which is provided during each stabilization round. This is done to maintain structure should their original successor fail.
+Should the predecessor fail, nodes set it to \texttt{nil} and wait for the predecessors predecessor to notify them.
+This approach is however not ideal if two neighboring nodes fail concurrently.
+
+\subsection{Data Replication}
+
+As data is only stored in memory, node failures result in data loss. To mitigate this, nodes keep a replica of their predecessors data which is built concurrently with the main storage.
+The client is only notified of a successful add operation once both the main storage and the replica have been updated.
+The handover process now also includes a split version of the replica data sent to new nodes joining the ring.
+When a predecessor dies, the node merges the replica storage with its main storage.
+
+\section{Main problems and solutions}
+
+\subsection{Functions and Parameters}
+
+TODO: amount of functions and parameters often lead to confusion and failing tests due to missmatches and bugs
+
+\subsection{Replication}
+
+TODO: difficulty in implementing replication correctly, especially during handover and failure scenarios
+
+\section{Evaluation}
+
+\subsection{Performance}
 
 \begin{figure}[htbp]
   \begin{subfigure}[b]{0.48\textwidth}
@@ -41,10 +83,8 @@ Why is it important?
     \begin{tikzpicture}[scale=0.8]
       % Label: "Machines" above columns
       \node[font=\large\bfseries] at (3.5, 1.5) {Machines};
-      
       % Label: "Nodes in Ring" to the left of rows
       \node[font=\large\bfseries, rotate=90] at (-1, -3.25) {Nodes in Ring};
-      
       \foreach \y [count=\n] in {
         {2.00,5.00,15.25,25.50,25.12, },
         {6.00,13.50,17.50,25.00,29.44, },
@@ -100,10 +140,8 @@ Why is it important?
     \begin{tikzpicture}[scale=0.8]
       % Label: "Machines" above columns
       \node[font=\large\bfseries] at (3.5, 1.5) {Machines};
-
       % Label: "Nodes in Ring" to the left of rows
       \node[font=\large\bfseries, rotate=90] at (-1, -3.25) {};
-
       \foreach \y [count=\n] in {
         {3.00,4.00,5.75,3.88,17.31},
         {1.00,4.00,6.00,8.50,18.88, },
@@ -156,93 +194,21 @@ Why is it important?
   \caption{Performance comparison in milliseconds for 1000 operations per machine}
   \label{fig:heatmaps}
 \end{figure}
-\section{Main problems and solutions}
 
-\textit{Summarize your problems, proposed solutions, etc. You do not
-  need to copy\&paste your code. Only if needed, you may write down
-  small code snipeds to show how you have solved a specific
-  problem/question.}
+xxx something on scale affecting the performance in both directions. A major bottleneck in these tests also stems from the initial ring member being the single point of entry for all lookup and add operations.
 
-Did you find any specific problem with the development of your
-solution?  How did you solve it?
+\subsection{Ring Maintenance}
 
-If you want to give a code example you can do it uing the verbatim environment.
-\begin{verbatim}
-this(X) ->
-    Y = is(X),
-    a(test(Y)).
-\end{verbatim}
-
-\section{Evaluation}
-
-\textit{If needed, you may provide figures or tables with main results
-  evaluating your proposals. For each seminar, we will provide you
-  with some guidance on which kind of evaluation you should do.}
-
-
-And Figures \ref{fig:results1} and \ref{fig:results2 } shows how to
-add a figure with some results. These figures have been created with
-gnuplot. There are tons of different kinds of plots that can be
-generated with gnuplot. Make sure to check out
-\url{http://gnuplot.info/demo/} and look at them so you can see what
-can you do with this program.
-
-
-To obtain these figures you have to:
-\begin{enumerate}
-
-\item Create the data file from the experiments (look at file
-  experiment.dat)
-
-\item Create a gnuplot file to create a figure in eps format (look at
-  files results1.plot and results2.plot). These files may be very
-  complex. But for the results we want to show, these examples are
-  enough. To create the eps figures, execute in terminal:
-
-\begin{verbatim}
-$> gnuplot results1.plot 
-\end{verbatim}
-
-\item As pdflatex does not recognize eps files, you must convert them
-  to pdf files. This is done by (it will generate a file
-  results1.pdf):
-
-\begin{verbatim}
-$> epstopdf results1.eps
-\end{verbatim}
-
-\item That's it! Just include the figure as shown in this template and
-  compile the latex as explained in the document ``Introduction to
-  \LaTeXe''.
-
-\end{enumerate}
-
-
-If you want, you can also create a table of results as Table
-\ref{tab:results}. If you look at the template code, you will see how
-to do a table in \LaTeX.
-
-\begin{table}[h]
-\centering
-\begin{tabular}{lcc}
-First column & Second column & Third column\\\hline
-Case 1 & 1.1 & 1.2\\\hline
-Case 2 & 2.1 & 2.2\\\hline
-Case 3 & 3.1 & 3.2\\\hline
-\end{tabular}
-\caption{Some random results in a table}
-\label{tab:results}
-\end{table}
+When a ring is stabilized on a short delay, the convergence is sped up and thus lookup and add operations get to the correct node faster. Key responsibility and handovers are also sped up.
+This however causes the system to use more resources both in terms of compute and network usage, specifically nodes generating messages for \textit{request}, \textit{notify}, and \textit{status} each round.
 
 \section{Conclusions}
 
-\textit{Change the layout of this template as you want. It's only for
-  your guidance but if you feel that you need a different structure,
-  feel free to change it. The report should not be too long ($\approx$
-  2-3 pages).}
+The advantages of this distributed storage come both in performance, through load balancing, and fault tolerance, through self healing and the lack of a single point of failure.
+Fault tolerance should be however prioritized, especially in productive applications, as data loss is often not acceptable.
 
-What have you learnt from the problem presented?
-Was it useful?
-
+Future improvements to the system include routing table improvements with a solution as the \textit{finger table} to improve lookup timings and considering network latency, although this would significantly increase complexity.
+A better replica mechanism which is either periodically synchronized through the stabilize function, or persisted on disk which nodes automatically restarting and recovering their state. Replicas could also be used to improve read performance, although this requires dealing with consistency issues.
+Finally, either an eventual consistency model could be applied to improve availability, or two-phase commits to ensure consistency, both excluding the other due to the CAP theorem.
 
 \end{document}
