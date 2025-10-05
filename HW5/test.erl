@@ -65,6 +65,33 @@ storagemakeringbreakring() ->
   timer:sleep(1000),
 
   check(1, Keys, n1),
+  check(2, Keys2, n1),
+
+  timer:sleep(1000),
+
+  io:format("--> Killing some nodes~n~n"),
+
+  N2 ! stop,
+
+  timer:sleep(6000),
+
+  N6 ! stop,
+
+  timer:sleep(6000),
+
+  N5 ! stop,
+
+  timer:sleep(6000),
+
+  N9 ! stop,
+
+  timer:sleep(6000),
+
+  io:format("--> Final check~n~n"),
+
+  n1 ! probe,
+
+  check(1, Keys, n1),
   check(2, Keys2, n1).
 
 

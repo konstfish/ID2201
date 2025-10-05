@@ -60,9 +60,9 @@ This approach is however not ideal if two neighboring nodes fail concurrently.
 
 As data is only stored in memory, node failures result in data loss. To mitigate this, nodes keep a replica of their predecessors data which is built concurrently with the main storage.
 The client is only notified of a successful add operation once both the main storage and the replica have been updated.
-TODO: update this section
-The handover process now also includes a split version of the replica data sent to new nodes joining the ring.
-When a predecessor dies, the node merges the replica storage with its main storage.
+Both the handover and failure handlers were updated to correctly split and merge the replica storage depending on the state of the ring.
+In simple terms, when a predecessor dies, the node merges the replica storage with its main storage and propagates its new state to its successor.
+When a new node joins, it receives the relevant keys for both its main storage and replica storage from its predecessor.
 
 \section{Main problems and solutions}
 
@@ -73,7 +73,9 @@ This was resolved through meticulous analysis and stepping through the node impl
 
 \subsection{Replication}
 
-TODO: difficulty in implementing replication correctly, especially during handover and failure scenarios
+Implementing functional data replication posed the greatest challenge as it required considerations in every part of the system.
+A rudimentary early implementation used the synchronization cycles to periodically correct the replicas, however this was inefficient and would strain the network. 
+Stepping through the implementation scenario for scenario helped identify the necessary changes and a corresponding sketch was created in parallel to aid development, see Figure \ref{fig:replication-sketch}.
 
 \section{Evaluation}
 
@@ -83,6 +85,26 @@ TODO: difficulty in implementing replication correctly, especially during handov
 Figure \ref{fig:heatmaps} shows the performance of the DHT with different ring sizes and amounts of clients, each of the client machines performing 1000 operations over the first node in the ring.
 The heatmaps illustrate the routing tables $O(N)$ lookup times, as performance degrades more with the number of nodes in the ring than with the number of clients.
 The single entrypoint into the ring is also bottleneck which could be resolved by having clients randomly hit nodes to profit from the pseudo-random key distribution.
+
+\subsection{Ring Maintenance}
+
+When a ring is stabilized on a short delay, the convergence is sped up and thus lookup and add operations get to the correct node faster. Key responsibility and handovers are also sped up.
+This however causes the system to use more resources both in terms of compute and network usage, specifically nodes generating messages for \textit{request}, \textit{notify}, and \textit{status} each round.
+
+\section{Conclusions}
+
+The advantages of this distributed storage come both in performance, through load balancing, and fault tolerance, through self healing and the lack of a single point of failure.
+Fault tolerance should be however prioritized, especially in productive applications, as data loss is often not acceptable.
+
+Future improvements to the system include routing table improvements with a solution as the \textit{finger table} to improve lookup timings and considering network latency, although this would significantly increase complexity.
+A better replica mechanism which is either periodically synchronized through the stabilize function, or persisted on disk which nodes automatically restarting and recovering their state. Replicas could also be used to improve read performance, although this requires dealing with consistency issues.
+Finally, either an eventual consistency model could be applied to improve availability, or two-phase commits to ensure consistency, both excluding the other due to the CAP theorem.
+
+\newpage
+
+\appendix
+
+\section{Performance Heatmaps}
 
 \begin{figure}[htbp]
   \begin{subfigure}[b]{0.48\textwidth}
@@ -198,22 +220,39 @@ The single entrypoint into the ring is also bottleneck which could be resolved b
     \caption{Lookup Operations}
     \label{fig:heatmap-b}
   \end{subfigure}
-  \caption{Performance comparison in milliseconds with varying numbers of nodes and clients}
+  \caption{Performance comparison in milliseconds with varying numbers of nodes and clients.}
   \label{fig:heatmaps}
 \end{figure}
 
-\subsection{Ring Maintenance}
+\section{Storage Replication Sketch}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.7\textwidth]{screenshots/sketch.PNG}
+  \caption{Sketch of the replication mechanism.}
+  \label{fig:replication-sketch}
+\end{figure}
 
-When a ring is stabilized on a short delay, the convergence is sped up and thus lookup and add operations get to the correct node faster. Key responsibility and handovers are also sped up.
-This however causes the system to use more resources both in terms of compute and network usage, specifically nodes generating messages for \textit{request}, \textit{notify}, and \textit{status} each round.
+\section{Testing}
 
-\section{Conclusions}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{screenshots/single.png}
+  \caption{Single node ring test.}
+  \label{fig:test1}
+\end{figure}
 
-The advantages of this distributed storage come both in performance, through load balancing, and fault tolerance, through self healing and the lack of a single point of failure.
-Fault tolerance should be however prioritized, especially in productive applications, as data loss is often not acceptable.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{screenshots/dual.png}
+  \caption{Two node ring test.}
+  \label{fig:test2}
+\end{figure}
 
-Future improvements to the system include routing table improvements with a solution as the \textit{finger table} to improve lookup timings and considering network latency, although this would significantly increase complexity.
-A better replica mechanism which is either periodically synchronized through the stabilize function, or persisted on disk which nodes automatically restarting and recovering their state. Replicas could also be used to improve read performance, although this requires dealing with consistency issues.
-Finally, either an eventual consistency model could be applied to improve availability, or two-phase commits to ensure consistency, both excluding the other due to the CAP theorem.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.9\textwidth]{screenshots/dual.png}
+  \caption{Four node ring test.}
+  \label{fig:test3}
+\end{figure}
 
 \end{document}

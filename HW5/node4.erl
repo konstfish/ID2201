@@ -2,7 +2,7 @@
 
 -compile(export_all).
 
--define(Stabilize, 750).
+-define(Stabilize, 500).
 -define(Timeout, 10000).
 
 start(Id) ->
@@ -40,7 +40,7 @@ node(Id, Predecessor, Successor, Next, Store, Replica) ->
       node(Id, Predecessor, Successor, Next, Store, Replica);
 
     {notify, New} ->
-      {Pred, Sto, Rep} = notify(New, Id, Predecessor, Store, Replica),
+      {Pred, Sto, Rep} = notify(New, Id, Predecessor, Successor, Store, Replica),
       node(Id, Pred, Successor, Next, Sto, Rep);
 
     {request, Peer} ->
@@ -49,7 +49,7 @@ node(Id, Predecessor, Successor, Next, Store, Replica) ->
 
     {status, Pred, Nx} ->
       {Succ, Nxt} = stabilize(Pred, Nx, Id, Successor),
-      fullreplica(Succ, Store),
+      % fullreplica(Succ, Store),
       node(Id, Predecessor, Succ, Nxt, Store, Replica);
 
     stabilize ->
@@ -94,10 +94,24 @@ node(Id, Predecessor, Successor, Next, Store, Replica) ->
       end;
       
     % file storage handover
+    {handover, Elements} ->
+      Merged = storage:merge(Store, Elements),
+      % RepMerged = storage:merge(Rep, Replica),
+      io:format("~w got stor handover: store: ~w, rep: ~w~n", [Id, storage:size(Merged), storage:size(Replica)]),
+      node(Id, Predecessor, Successor, Next, Merged, Replica);
+
     {handover, Elements, Rep} ->
       Merged = storage:merge(Store, Elements),
+      % RepMerged = storage:merge(Rep, Replica),
       io:format("~w got handover: store: ~w, rep: ~w~n", [Id, storage:size(Merged), storage:size(Rep)]),
       node(Id, Predecessor, Successor, Next, Merged, Rep);
+
+    {updaterep, Rep} ->
+      io:format("~w got replica update: ~w~n", [Id, storage:size(Rep)]),
+      node(Id, Predecessor, Successor, Next, Store, Rep);
+
+    {triggerrep} ->
+      sendrep(Successor, Store);
 
     %{handoverrev, Elements} ->
     %  Merged = storage:merge(Replica, Elements),
@@ -156,12 +170,13 @@ request(Peer, Predecessor, Successor) ->
       Peer ! {status, {Pkey, Ppid}, Successor}
   end.
 
-notify({Nkey, Npid}, Id, Predecessor, Store, Replica) ->
+notify({Nkey, Npid}, Id, Predecessor, {_, _, Spid}, Store, Replica) ->
   case Predecessor of
     nil ->
-      {Keep, Rep} = handover(Id, Store, Replica, Nkey, Npid),
+      % accept new predecessor and handover keys
+      {Keep, Rep} = handovernew(Id, Store, Replica, Nkey, Npid),
       Nref = monitor(Npid),
-      {{Nkey, Nref, Npid}, Keep, Rep};
+      {{Nkey, Nref, Npid}, Keep, Replica};
     {Pkey, Pref, _} ->
       case key:between(Nkey, Pkey, Id) of
         true ->
@@ -169,6 +184,7 @@ notify({Nkey, Npid}, Id, Predecessor, Store, Replica) ->
           {Keep, Rep} = handover(Id, Store, Replica, Nkey, Npid),
           drop(Pref),
           Nref = monitor(Npid),
+          Spid ! {updaterep, Keep},
           {{Nkey, Nref, Npid}, Keep, Rep};
         false ->
           % keep old one
@@ -220,9 +236,18 @@ lookup(Key, Qref, Client, Id, {Pkey, _, _}, {_, _, Spid}, Store) ->
 
 handover(Id, Store, Replica, Nkey, Npid) ->
   {Keep, Rest} = storage:split(Nkey, Id, Store),
+
   io:format("~w: handing over to ~w -> ~w keys, keeping ~w keys~n", [Id, Nkey, storage:size(Rest), storage:size(Keep)]),
-  Npid ! {handover, Rest, Keep},
+  Npid ! {handover, Rest, Replica},
   {Keep, Rest}.
+
+handovernew(Id, Store, Replica, Nkey, Npid) ->
+  {Keep, Rest} = storage:split(Nkey, Id, Store),
+  
+  io:format("~w: handing over to ~w -> ~w keys, keeping ~w keys~n", [Id, Nkey, storage:size(Rest), storage:size(Keep)]),
+  Npid ! {handover, Rest},
+  {Keep, Rest}.
+
 
 fullreplica({_, _, Spid}, Store) ->
   Spid ! {fullreplica, Store}.
@@ -237,13 +262,20 @@ drop(nil) ->
 drop(Ref) ->
   erlang:demonitor(Ref, [flush]).
 
+% this just completely breaks when next goes down, so killing them needs to be spaced a lot
 down(Ref, {_, Ref, _}, Successor, Next, Store, Replica) ->
   % predecessor died, set to nil & merge my storage
   Sto = storage:merge(Store, Replica),
+  sendrep(Successor, Sto),
+  stabilize(Successor),
   {nil, Successor, Next, Sto, storage:create()};
-down(Ref, Predecessor, {_, Ref, _}, {Nkey, Nref, Npid}, Store, Replica) ->
-  % successor died, adopt next as successor
-  % TODO: update successor store
+down(Ref, Predecessor, {_, Ref, _}, {Nkey, _, Npid}, Store, Replica) ->
+  % successor died, adopt next as successor & set new monitor
+  NewRef = monitor(Npid),
   Npid ! {request, self()},
-  {Predecessor, {Nkey, Nref, Npid}, nil, Store, Replica}.
+  sendrep({Nkey, NewRef, Npid}, Store),
+  stabilize({Nkey, NewRef, Npid}),
+  {Predecessor, {Nkey, NewRef, Npid}, nil, Store, Replica}.
 
+sendrep({_, _, Spid}, Storage) ->
+  Spid ! {updaterep, Storage}.
