@@ -1,6 +1,6 @@
 % Very simple template for lab reports. Most common packages are already included.
 \documentclass[a4paper, 11pt]{article}
-\usepackage[utf8]{inputenc} % Change according your file encoding
+\usepackage[utf8]{inputenc} % Change according to your file encoding
 \usepackage{float}
 \usepackage{graphicx}
 \usepackage{url}
@@ -24,12 +24,13 @@
 \author{David Fischer}
 \date{\today{}}
 
+
 \begin{document}
 
 \maketitle
 
 \section{Introduction}
-This assignment's goal was the implementation of \textit{Chordy} a DHT based on a variation of \textit{Chord}, a distributed lookup protocol designed to efficiently identify the node in a peer-to-peer that stores a particular data item.
+This assignment's goal was the implementation of \textit{Chordy} a DHT based on a variation of \textit{Chord}, a distributed lookup protocol designed to efficiently identify the node in a peer-to-peer network that stores a particular object through key distribution in a ring structure.
 \textit{Chord} addresses many problems distributed systems face such as load balancing, decentralization, scalability, availability, and flexible naming.
 
 \section{Implementation}
@@ -39,8 +40,8 @@ This assignment's goal was the implementation of \textit{Chordy} a DHT based on 
 To ease validation and development, instead of the usually intended consistent hashing function, simple numerical IDs were used for both nodes and later on keys. This still provides the random distribution of keys to nodes, which should result in even storage sizes between nodes.
 % As before, let m be the number of bits in the key/node identifiers. Each node, n, maintains a routing table with (at most) m entries, called the finger table.
 As opposed to the \textit{finger table}, used in the original \textit{Chord} paper, which allows for $O(log N)$ lookup times, a simpler routing table was implemented. Each node only keeps track of its successor and predecessor in the ring. This results in $O(N)$ lookup times.
-The ring structure is periodically stabilized through a \texttt{stabilize/3} function, which gradually heals the ring when new nodes join by having each node ask its successor for their predecessor and adjusting its own records accordingly.
-As the structure will have to wrap around at some point, the \texttt{between/3} function was implemented in a way to handle \texttt{From} being larger than \texttt{To} by checking if the \texttt{Id} is either larger than \texttt{From} or smaller than \texttt{To}.
+The ring structure is periodically healed through a \texttt{stabilize/3} function, by having each node ask its successor for their predecessor and adjusting its own records accordingly in situations when new nodes join.
+As the structure will have to wrap around at some point, the \texttt{between/3} function was implemented in a way to handle \texttt{From} being larger than \texttt{To} by checking for that condition explicitly and comparing if the specified key is either after \texttt{From} or smaller than \texttt{To}.
 
 \subsection{Storage}
 
@@ -51,9 +52,9 @@ Additionally, to support new nodes joining the ring, a handover message containi
 
 \subsection{Failure Detection}
 
-To detect failed nodes, Erlangs failure detection mechanism was used to have each node monitor their predecessor and successor.
-Nodes keep a record of their successors successor, which is provided during each stabilization round. This is done to maintain structure should their original successor fail.
-Should the predecessor fail, nodes set it to \texttt{nil} and wait for the predecessors predecessor to notify them.
+To detect failed nodes, Erlang's failure detection mechanism was used to have each node monitor their predecessor and successor.
+Nodes keep a record of their successor's successor, which is provided during each stabilization round. This is done to maintain structure should their original successor fail.
+Should the predecessor fail, nodes set it to \texttt{nil} and wait for the predecessor's predecessor to notify them.
 This approach is however not ideal if two neighboring nodes fail concurrently.
 
 \subsection{Data Replication}
@@ -62,20 +63,20 @@ As data is only stored in memory, node failures result in data loss. To mitigate
 The client is only notified of a successful add operation once both the main storage and the replica have been updated.
 Both the handover and failure handlers were updated to correctly split and merge the replica storage depending on the state of the ring.
 In simple terms, when a predecessor dies, the node merges the replica storage with its main storage and propagates its new state to its successor.
-When a new node joins, it receives the relevant keys for both its main storage and replica storage from its predecessor.
+When a new node joins, it receives the keys for both its main storage and replica storage from its predecessor.
 
 \section{Main problems and solutions}
 
 \subsection{Functions and Parameters}
 
-The amount of functions and parameters the mature implementations require posed difficulties with retaining a holistic view and often lead to failing tests due to return value mismatches and bugs. 
+The number of functions and parameters the mature implementations require posed difficulties with retaining a holistic view and often lead to failing tests due to return value mismatches and bugs. 
 This was resolved through meticulous analysis and stepping through the node implementations function for function.
 
 \subsection{Replication}
 
 Implementing functional data replication posed the greatest challenge as it required considerations in every part of the system.
 A rudimentary early implementation used the synchronization cycles to periodically correct the replicas, however this was inefficient and would strain the network. 
-Stepping through the implementation scenario for scenario helped identify the necessary changes and a corresponding sketch was created in parallel to aid development, see Figure \ref{fig:replication-sketch}.
+Stepping through the implementation scenario for scenario helped identify the necessary changes and a corresponding sketch, Figure \ref{fig:replication-sketch}, was created to aid development.
 
 \section{Evaluation}
 
@@ -84,20 +85,20 @@ Stepping through the implementation scenario for scenario helped identify the ne
 % xxx something on scale affecting the performance in both directions.
 Figure \ref{fig:heatmaps} shows the performance of the DHT with different ring sizes and amounts of clients, each of the client machines performing 1000 operations over the first node in the ring.
 The heatmaps illustrate the routing tables $O(N)$ lookup times, as performance degrades more with the number of nodes in the ring than with the number of clients.
-The single entrypoint into the ring is also bottleneck which could be resolved by having clients randomly hit nodes to profit from the pseudo-random key distribution.
+The single entrypoint into the ring is also a bottleneck which could be resolved by having clients randomly hit nodes to profit from the pseudo-random key distribution.
 
 \subsection{Ring Maintenance}
 
-When a ring is stabilized on a short delay, the convergence is sped up and thus lookup and add operations get to the correct node faster. Key responsibility and handovers are also sped up.
-This however causes the system to use more resources both in terms of compute and network usage, specifically nodes generating messages for \textit{request}, \textit{notify}, and \textit{status} each round.
+When the ring is stabilized on a short delay, the convergence is sped up and thus lookup and add operations get to the correct node faster. Key responsibility and handovers are also sped up.
+This however causes the system to use more resources both in terms of compute and network, specifically nodes generating messages for \textit{request}, \textit{notify}, and \textit{status} each round.
 
 \section{Conclusions}
 
-The advantages of this distributed storage come both in performance, through load balancing, and fault tolerance, through self healing and the lack of a single point of failure.
-Fault tolerance should be however prioritized, especially in productive applications, as data loss is often not acceptable.
+The advantages of this distributed storage come both in performance through load balancing and fault tolerance through self healing and the lack of a single point of failure.
+Fault tolerance should however be prioritized, especially in productive applications, as data loss is often not acceptable.
 
-Future improvements to the system include routing table improvements with a solution as the \textit{finger table} to improve lookup timings and considering network latency, although this would significantly increase complexity.
-A better replica mechanism which is either periodically synchronized through the stabilize function, or persisted on disk which nodes automatically restarting and recovering their state. Replicas could also be used to improve read performance, although this requires dealing with consistency issues.
+Future improvements to the system include rewriting the routing table with a solution such as the \textit{finger table} to improve lookup timings and consider network latency, although this would significantly increase complexity.
+A better replica and storage mechanism, ideally persisted on disk with nodes automatically restarting and recovering their state. Replicas could also be used to improve read performance, although this requires dealing with consistency issues.
 Finally, either an eventual consistency model could be applied to improve availability, or two-phase commits to ensure consistency, both excluding the other due to the CAP theorem.
 
 \newpage
@@ -250,7 +251,7 @@ Finally, either an eventual consistency model could be applied to improve availa
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.9\textwidth]{screenshots/dual.png}
+  \includegraphics[width=0.9\textwidth]{screenshots/8_machines.png}
   \caption{Four node ring test.}
   \label{fig:test3}
 \end{figure}
